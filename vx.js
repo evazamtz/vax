@@ -295,6 +295,9 @@
             var self = this;
 
             this.id = id;
+            this.inputSockets = {};
+            this.outputSockets = {};
+
             this.config = _.defaults(config, {
                 name: "Unnamed",
                 width: 200,
@@ -359,7 +362,6 @@
 
 
                 // input sockets
-                self.inputSockets = [];
                 for (var i = 0; i < self.config.inputSockets.length; ++i) {
                     var socketId = this.id + "-InputSocket-" + vx.genNextId();
                     var inputSocket = new VxSocket(socketId, self, i, self.config.inputSockets[i], 'input');
@@ -368,7 +370,6 @@
                 }
 
                 // output sockets
-                self.outputSockets = [];
                 for (var j = 0; j < self.config.outputSockets.length; ++j) {
                     var socketId = this.id + "-OutputSocket-" + vx.genNextId();
                     var outputSocket = new VxSocket(socketId, self, j, self.config.outputSockets[j], 'output');
@@ -564,8 +565,59 @@
 
             this.init();
         };
-    } // function VX
 
+        this.findRootNodes = function()
+        {
+            return _.filter(this.nodes, function(node)
+            {
+                return (_.size(node.outputSockets) == 0) ? true : _.every(node.outputSockets, function(socket) { return !socket.isWired(); });
+            });
+        };
+
+        this.composeTrees = function()
+        {
+            var composeTree = function composeTree(vxNode, parentsIds)
+            {
+                parentsIds = parentsIds || [];
+
+                if (_.some(parentsIds, function(pid) { return pid == vxNode.id;}))
+                {
+                    throw new Error("Node " + vxNode.id + " is already present in graph parents: " + parentsIds.join(', '));
+                }
+
+                var wiredInputSockets = _.filter(vxNode.inputSockets, function(socket) { return socket.isWired();});
+
+                return {
+                    id: vxNode.id,
+                    type: vxNode.config.name,
+                    children: _.map(wiredInputSockets, function(inputSocket)
+                    {
+                        var wiresIdsArray = _.keys(inputSocket.wires);
+
+                        if (_.size(wiresIdsArray) !== 1)
+                        {
+                            throw new Error("Input socket " + inputSocket.id + " is wired to more than 1 output");
+                        }
+
+                        var wire = vxRoot.wires[wiresIdsArray[0]];
+
+                        var outputSocket = vxRoot.sockets[wire.outputSocketId];
+
+                        parentsIds.push(vxNode.id);
+
+                        return {
+                            input: inputSocket.config.name,
+                            output: outputSocket.config.name,
+                            node: composeTree(vxRoot.nodes[outputSocket.node.id], parentsIds),
+                        };
+                    })
+                };
+            };
+
+
+            return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
+        }
+    } // function VX
 
     window.VX = VX;
 }
