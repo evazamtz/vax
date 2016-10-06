@@ -116,16 +116,26 @@
 
             nodeConfig.inputSockets = _.map(nodeConfig.in || {}, function(socket, name)
             {
-                return {
-                    name: name
-                }
+                return _.defaults(socket, {
+                    name: name,
+                    title: name
+                });
+            });
+
+            nodeConfig.attributes = _.map(nodeConfig.attrs || {}, function(attr, name)
+            {
+                return _.defaults(attr, {
+                    name: name,
+                    title: name
+                });
             });
 
             nodeConfig.outputSockets = _.map(nodeConfig.out || {}, function(socket, name)
             {
-                return {
-                    name: name
-                }
+                return _.defaults(socket, {
+                    name: name,
+                    title: name
+                });
             });
 
             return nodeConfig;
@@ -151,7 +161,8 @@
             this.nodeIndex = nodeIndex;
             this.config = _.defaults(config, {
                 color: "#fff",
-                name: "A",
+                name: "",
+                title: "",
             });
             this.type = type;
 
@@ -176,12 +187,12 @@
 
                 if (self.isInput())
                 {
-                    self.caption = raphael.text(cx + 10, cy, self.config.name);
+                    self.caption = raphael.text(cx + 10, cy, self.config.title);
                     self.caption.attr('text-anchor', 'start');
                 }
                 else
                 {
-                    self.caption = raphael.text(cx - 10, cy, self.config.name);
+                    self.caption = raphael.text(cx - 10, cy, self.config.title);
                     self.caption.attr('text-anchor', 'end');
                 }
 
@@ -384,10 +395,99 @@
             this.init();
         };
 
+        function VxAttribute(id, node, nodeIndex, config)
+        {
+            var self = this;
+
+            if (!(node instanceof VxNode)) {
+                throw new Error("Instance of VxNode was expected");
+            }
+
+            this.id = id;
+            this.node = node;
+            this.vx = node.getVX();
+            this.nodeIndex = nodeIndex;
+            this.config = _.defaults(config, {
+                color: "#fff",
+                name: "A",
+                title: "Attr",
+                default: "",
+            });
+            this.value = this.config.default;
+
+            this.createCaption = function()
+            {
+                var nodeX = self.node.getX();
+                var nodeY = self.node.getY();
+
+                var socketsCount = self.node.getInputSocketsCount();
+
+                self.caption = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 25 + 25, self.config.title + ":");
+                self.caption.attr('text-anchor', 'start');
+
+                self.caption.attr({
+                    "fill": self.config.color,
+                    "font-family": "Tahoma",
+                    "font-size": "12pt",
+                    "font-weight": "bold",
+                    "text-anchor": "start"
+                });
+            };
+
+            this.createValueHolder = function()
+            {
+                var nodeX = self.node.getX();
+                var nodeY = self.node.getY();
+
+                var socketsCount = self.node.getInputSocketsCount();
+
+                self.valueHolder = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 25 + 40, self.value);
+                self.valueHolder.attr('text-anchor', 'start');
+
+                self.valueHolder.attr({
+                    "fill": "orange",
+                    "font-family": "Tahoma",
+                    "font-size": "12pt",
+                    "font-weight": "bold",
+                    "text-anchor": "start"
+                });
+
+                // change value
+                self.valueHolder.dblclick(function()
+                {
+                    var newValue = prompt("Enter value", self.value);
+                    self.value = newValue;
+                    self.valueHolder.attr("text", newValue);
+                });
+            };
+
+            this.init = function () {
+
+                self.createCaption();
+                self.createValueHolder();
+            };
+
+            this.updatePos = function (nx, ny)
+            {
+                self.caption.attr({
+                    x: nx + 8,
+                    y: ny + self.node.getInputSocketsCount() * 20 + (self.nodeIndex + 1) * 25 + 25
+                });
+
+                self.valueHolder.attr({
+                    x: nx + 8,
+                    y: ny + self.node.getInputSocketsCount() * 20 + (self.nodeIndex + 1) * 25 + 40
+                });
+            };
+
+            this.init();
+        };
+
         function VxNode(id, config) {
             var self = this;
 
             this.id = id;
+            this.attributes = {};
             this.inputSockets = {};
             this.outputSockets = {};
 
@@ -399,6 +499,7 @@
                 color: "0-#490-#070:20-#333", // vxRoot.config.ui.defaultNodeColor
                 x: 0,
                 y: 0,
+                attributes: {},
                 inputSockets: {},
                 outputSockets: {}
             });
@@ -420,6 +521,7 @@
 
             this.init = function () {
 
+                // self graphics
                 self.bgRect = raphael.rect(self.config.x, self.config.y, self.config.width, self.config.height, 10);
                 self.bgRect.attr({
                     fill: '#111',
@@ -465,6 +567,13 @@
                     vxRoot.sockets[socketId] = inputSocket;
                 }
 
+                // attributes
+                for (var i = 0; i < self.config.attributes.length; ++i) {
+                    var attrId = this.id + "-Attribute-" + vx.genNextId();
+                    var attr = new VxAttribute(attrId, self, i, self.config.attributes[i]);
+                    self.attributes[attrId] = attr;
+                }
+
                 // output sockets
                 for (var j = 0; j < self.config.outputSockets.length; ++j) {
                     var socketId = this.id + "-OutputSocket-" + vx.genNextId();
@@ -492,7 +601,7 @@
                     }
                 );
 
-                // moveContainer remove
+                // remove on 2x click
                 self.moveContainer.dblclick(function()
                 {
                     if (confirm('Вы действительно хотите удалить выделенный узел ' + self.config.component + '?'))
@@ -526,7 +635,12 @@
                 _.each(self.inputSockets,  removeSocket);
                 _.each(self.outputSockets, removeSocket);
 
-
+                // remove attrs
+                _.each(self.attributes, function(attr)
+                {
+                    attr.caption.remove();
+                    attr.valueHolder.remove();
+                });
 
                 // remove itself
                 self.moveContainer.remove();
@@ -567,6 +681,15 @@
                     }
                 }
 
+                // move attributes
+                for (k in self.attributes)
+                {
+                    if (self.attributes.hasOwnProperty(k))
+                    {
+                        self.attributes[k].updatePos(newPos.x, newPos.y);
+                    }
+                }
+
                 // move output sockets
                 for (k in self.outputSockets)
                 {
@@ -583,6 +706,16 @@
 
             this.getY = function () {
                 return self.moveContainer.attr("y");
+            };
+
+            this.getInputSocketsCount = function()
+            {
+                return _.size(this.inputSockets);
+            };
+
+            this.getOutputSocketsCount = function()
+            {
+                return _.size(this.outputSockets);
             };
 
             this.getWidth = function () {
@@ -728,10 +861,18 @@
 
                 var wiredInputSockets = _.filter(vxNode.inputSockets, function(socket) { return socket.isWired();});
 
+                // collect attrs
+                var nodeAttrs = {};
+                _.each(vxNode.attributes, function(attr)
+                {
+                    nodeAttrs[attr.config.name] = attr.value;
+                });
+
                 return {
                     id: vxNode.id,
                     component: vxNode.config.component,
-                    children: _.map(wiredInputSockets, function(inputSocket)
+                    attrs: nodeAttrs,
+                    links: _.map(wiredInputSockets, function(inputSocket)
                     {
                         var wiresIdsArray = _.keys(inputSocket.wires);
 
@@ -747,14 +888,14 @@
                         parentsIds.push(vxNode.id);
 
                         return {
-                            input: inputSocket.config.name,
-                            output: outputSocket.config.name,
+                            to: inputSocket.config.name,
+                            from: outputSocket.config.name,
                             node: composeTree(vxRoot.nodes[outputSocket.node.id], parentsIds),
                         };
                     })
                 };
-            };
 
+            };
 
             return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
         }

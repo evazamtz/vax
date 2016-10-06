@@ -10,15 +10,44 @@
     <link rel="stylesheet" href="styles.css" type="text/css"/>
 </head>
 <body>
+<style type="text/css">
+    #eval {
+        position: absolute;
+        top: 120px;
+        left: 30px;
+        z-index: 1000;
+    }
+</style>
 <div class="vx-help">
     <ul>
         <li>Press X to add a new node</li>
-        <li>Double click a node or a wire to remove it</li>
+        <li>Double click a node caption or a wire to remove it</li>
     </ul>
 </div>
 <script type="text/javascript">
-    var r = Raphael(0, 0, 2560, 1440);
-    var myVX = new VX(r, {schema: vxSchema});
+    $(function()
+    {
+        // vx
+        var r = Raphael(0, 0, 2560, 1440);
+        window.myVX = new VX(r, {schema: vxSchema});
+
+
+        // eval
+        $('#eval').click(function()
+        {
+            var trees = myVX.composeTrees();
+
+            if (trees.length != 0)
+            {
+                return alert("There should be exactly one tree!");
+            }
+
+            var tree = trees[0];
+
+            var root
+        });
+    });
 </script>
+<button id="eval" type="button">Eval!</button>
 </body>
 </html>

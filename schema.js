@@ -13,7 +13,8 @@ var vxSchema = {
       "attrs": {
         "V": {
           "title": "Value",
-          "type": "Numeric"
+          "type": "Numeric",
+          "default": 0
         }
       },
       "out": {
@@ -110,4 +111,4 @@ var vxSchema = {
       }
     }
   }
-}
+};

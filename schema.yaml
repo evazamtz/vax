@@ -12,6 +12,7 @@ components:
       V:
         title: Value
         type: Numeric
+        default: 0
     out:
       O:
         type: Numeric
