@@ -1,7 +1,24 @@
 var vxSchema = {
   "types": {
-    "Numeric": {
-      "isGeneric": false
+    "Numeric": {},
+    "Int": {
+      "extends": "Numeric"
+    },
+    "Float": {
+      "extends": "Numeric"
+    },
+    "String": {},
+    "Boolean": {},
+    "Array": {
+      "typeParams": [
+        "T"
+      ]
+    },
+    "Pair": {
+      "typeParams": [
+        "A",
+        "B"
+      ]
     }
   },
   "components": {
@@ -96,6 +113,58 @@ var vxSchema = {
       "out": {
         "O": {
           "type": "Numeric"
+        }
+      }
+    },
+    "If": {
+      "title": "If",
+      "typeParams": [
+        "T"
+      ],
+      "in": {
+        "Condition": {
+          "type": "Boolean"
+        },
+        "onTrue": {
+          "type": "@T"
+        },
+        "onFalse": {
+          "type": "@T"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "@T"
+        }
+      }
+    },
+    "ArrayLength": {
+      "title": "Array.length",
+      "in": {
+        "A": {
+          "title": "Array",
+          "type": "Array[T]"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "Int"
+        }
+      }
+    },
+    "First": {
+      "title": "First of pair",
+      "typeParams": [
+        "A"
+      ],
+      "in": {
+        "P": {
+          "type": "Pair[@A,B]"
+        }
+      },
+      "out": {
+        "R": {
+          "type": "@A"
         }
       }
     },
