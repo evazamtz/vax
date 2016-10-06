@@ -37,14 +37,53 @@
         {
             var trees = myVX.composeTrees();
 
-            if (trees.length != 0)
+            if (trees.length !== 1)
             {
                 return alert("There should be exactly one tree!");
             }
 
-            var tree = trees[0];
+            var root = trees[0];
 
-            var root
+            if (root.component !== "Result")
+            {
+                return alert("Root node should be 'Result'!");
+            }
+
+            var walk = function walk(node)
+            {
+                if (!node)
+                {
+                    return 0;
+                }
+
+                switch (node.component)
+                {
+                    case 'Result':
+                        return 'Result = ' + walk(node.links.I);
+
+                    case 'Add':
+                        return walk(node.links.A) + walk(node.links.B);
+
+                    case 'Sub':
+                        return walk(node.links.A) - walk(node.links.B);
+
+                    case 'Mul':
+                        return walk(node.links.A) * walk(node.links.B);
+
+                    case 'Div':
+                        return walk(node.links.A) / walk(node.links.B);
+
+                    case 'Constant':
+                        return parseInt(node.attrs.V);
+
+                    default:
+                        throw new Error("Unsupported node component: " + node.component);
+                }
+            };
+
+            var res = walk(root);
+
+            alert(res);
         });
     });
 </script>

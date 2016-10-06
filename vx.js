@@ -850,7 +850,7 @@
 
         this.composeTrees = function()
         {
-            var composeTree = function composeTree(vxNode, parentsIds)
+            var composeTree = function composeTree(vxNode, parentsIds, out)
             {
                 parentsIds = parentsIds || [];
 
@@ -868,37 +868,37 @@
                     nodeAttrs[attr.config.name] = attr.value;
                 });
 
+                // collect links
+                var links = {};
+                _.each(wiredInputSockets, function(inputSocket) {
+                    var wiresIdsArray = _.keys(inputSocket.wires);
+
+                    if (_.size(wiresIdsArray) !== 1) {
+                        throw new Error("Input socket " + inputSocket.id + " is wired to more than 1 output");
+                    }
+
+                    var wire = vxRoot.wires[wiresIdsArray[0]];
+
+                    var outputSocket = vxRoot.sockets[wire.outputSocketId];
+
+                    parentsIds.push(vxNode.id);
+
+                    links[inputSocket.config.name] = composeTree(vxRoot.nodes[outputSocket.node.id], parentsIds, outputSocket.config.name);
+                });
+
+                // return node data
                 return {
                     id: vxNode.id,
                     component: vxNode.config.component,
                     attrs: nodeAttrs,
-                    links: _.map(wiredInputSockets, function(inputSocket)
-                    {
-                        var wiresIdsArray = _.keys(inputSocket.wires);
-
-                        if (_.size(wiresIdsArray) !== 1)
-                        {
-                            throw new Error("Input socket " + inputSocket.id + " is wired to more than 1 output");
-                        }
-
-                        var wire = vxRoot.wires[wiresIdsArray[0]];
-
-                        var outputSocket = vxRoot.sockets[wire.outputSocketId];
-
-                        parentsIds.push(vxNode.id);
-
-                        return {
-                            to: inputSocket.config.name,
-                            from: outputSocket.config.name,
-                            node: composeTree(vxRoot.nodes[outputSocket.node.id], parentsIds),
-                        };
-                    })
+                    links: links,
+                    out: out
                 };
 
             };
 
             return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
-        }
+        };
 
         // init VX
         this.init();
