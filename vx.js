@@ -362,27 +362,6 @@
                         _.each(nodeConfig.outputSockets, subUpdate);
                         _.each(nodeConfig.attributes,    subUpdate);
 
-
-                        /*
-                        for (var k in nodeConfig.inputSockets)
-                        {
-                            nodeConfig.inputSockets[k].type = nodeConfig.inputSockets[k].
-                            nodeConfig.inputSockets[k].parsedType = vx.parseType(nodeConfig.inputSockets[k].type);
-                        }
-
-                        // out
-                        for (k in nodeConfig.outputSockets)
-                        {
-                            nodeConfig.outputSockets[k].type = nodeConfig.outputSockets[k].type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
-                            nodeConfig.outputSockets[k].parsedType = vx.parseType(nodeConfig.outputSockets[k].type);
-                        }
-
-                        // attrs
-                        for (k in nodeConfig.attributes)
-                        {
-                            nodeConfig.attributes[k].type = nodeConfig.attributes[k].type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
-                            nodeConfig.attributes[k].parsedType = vx.parseType(nodeConfig.attributes[k].type);
-                        }*/
                     }
                     else
                     {
@@ -1167,7 +1146,6 @@
                     var outputSocket = vxRoot.sockets[wire.outputSocketId];
 
 
-
                     links[inputSocket.config.name] = composeTree(vxRoot.nodes[outputSocket.node.id], newParentsIds, outputSocket.config.name);
                 });
 
@@ -1177,7 +1155,8 @@
                     component: vxNode.config.component,
                     attrs: nodeAttrs,
                     links: links,
-                    out: out
+                    out: out,
+                    typeInstances: vxNode.config.typeInstances
                 };
 
             };
