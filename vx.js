@@ -1,4 +1,4 @@
-(function(window, _) {
+(function(window, _, $) {
 
     // static helper
     var idCounter = 1;
@@ -27,16 +27,109 @@
     };
 
     // VX class
-    function VX(raphael)
+    function VX(raphael, config)
     {
         var vxRoot = this;
 
         this.raphael = raphael;
+
+        this.config = _.defaults(config, {
+            schema: {
+                types: {},
+                components: {} // elements,nodes?
+            },
+            skin: {}, // theme. ui
+            lang: {}
+        });
+
+        this.schema = this.config.schema;
+
         this.nodes = {};
         this.sockets = {};
         this.wires = {};
 
+        this.init = function()
+        {
+            var self = this;
 
+            $(document).mousemove(function(e) {
+                self.mouseX = e.pageX;
+                self.mouseY = e.pageY;
+            }).mouseover(); // call the handler immediately
+
+
+            $(document).keyup(function (evt) { // should be a DOM node for that
+                if (evt.which == 88) // X key
+                {
+                    self.showSelector();
+                }
+            });
+        };
+
+        this.showSelector = function()
+        {
+            var self = this;
+
+            if (self.$selector)
+            {
+                self.$selector.remove();
+            }
+
+            var $wrapper = self.$selector = $('<div class="vx-component-selector">');
+
+            _.each(self.schema.components, function(component, name)
+            {
+                $wrapper.append($('<div class="vx-component"/>').text(component.title).attr('data-vx-component', name));
+            });
+
+            $wrapper.on('click', 'div', function()
+            {
+
+                var $this = $(this);
+
+                var component = $this.attr('data-vx-component');
+
+                var nodeConfig = self.translateNodeConfig(component, self.schema.components[component]);
+
+                nodeConfig.x = self.mouseX;
+                nodeConfig.y = self.mouseY;
+
+                vxRoot.createNode(nodeConfig);
+
+                $wrapper.remove();
+            });
+
+
+            $wrapper.mouseleave(function()
+            {
+                $wrapper.remove();
+            });
+
+            $wrapper.offset({left: self.mouseX, top: self.mouseY});
+            $('body').append($wrapper);
+        };
+
+        this.translateNodeConfig = function(component, nodeConfig)
+        {
+            nodeConfig.component = component;
+            nodeConfig.title = nodeConfig.title || component;
+
+            nodeConfig.inputSockets = _.map(nodeConfig.in || {}, function(socket, name)
+            {
+                return {
+                    name: name
+                }
+            });
+
+            nodeConfig.outputSockets = _.map(nodeConfig.out || {}, function(socket, name)
+            {
+                return {
+                    name: name
+                }
+            });
+
+            return nodeConfig;
+        };
 
         this.createNode = function(config)
         {
@@ -299,9 +392,11 @@
             this.outputSockets = {};
 
             this.config = _.defaults(config, {
-                name: "Unnamed",
-                width: 200,
-                height: 200,
+                title: "Node",
+                component: null,
+                width: 100,
+                height: 100,
+                color: "0-#490-#070:20-#333", // vxRoot.config.ui.defaultNodeColor
                 x: 0,
                 y: 0,
                 inputSockets: {},
@@ -335,22 +430,23 @@
 
                 self.captionRect = raphael.rect(self.config.x, self.config.y, self.config.width, 30, 10);
                 self.captionRect.attr({
-                    fill: "0-#490-#070:20-#333",
+                    fill: self.config.color,
                     "stroke-width": 0
                 });
 
                 self.captionRect2 = raphael.rect(self.config.x, self.config.y + 10, self.config.width, 20);
                 self.captionRect2.attr({
-                    fill: "0-#490-#070:20-#333",
+                    fill: self.config.color,
                     "stroke-width": 0
                 });
 
-                self.caption = raphael.text(self.config.x + 35, self.config.y + 15, self.config.name);
+                self.caption = raphael.text(self.config.x + 10, self.config.y + 15, self.config.title);
                 self.caption.attr({
                     "font-family": "Tahoma",
                     "font-size": "12pt",
                     "font-weight": "bold",
-                    "fill": "#fff"
+                    "fill": "#fff",
+                    "text-anchor": "start"
                 });
 
                 self.moveContainer = raphael.rect(self.config.x, self.config.y, self.config.width, self.config.height, 10);
@@ -378,7 +474,7 @@
                 }
 
 
-                // moveContainer
+                // moveContainer drag
                 self.moveContainer.drag(
                     function (dx, dy, nx, ny)
                     {
@@ -395,6 +491,51 @@
                         this.dragY = null;
                     }
                 );
+
+                // moveContainer remove
+                self.moveContainer.dblclick(function()
+                {
+                    if (confirm('Вы действительно хотите удалить выделенный узел ' + self.config.component + '?'))
+                    {
+                        self.remove();
+                    }
+                })
+            };
+
+            // удаление
+            this.remove = function()
+            {
+                var removeSocket = function(socket)
+                {
+                    // remove wires
+                    _.each(_.keys(socket.wires), function(wireId)
+                    {
+                        var wire = vxRoot.wires[wireId];
+                        wire.remove();
+                    });
+
+                    // remove graphics
+                    socket.circle.remove();
+                    socket.caption.remove();
+
+                    // delete from repository
+                    delete vxRoot.sockets[socket.id];
+                };
+
+                // remove all sockets
+                _.each(self.inputSockets,  removeSocket);
+                _.each(self.outputSockets, removeSocket);
+
+
+
+                // remove itself
+                self.moveContainer.remove();
+                self.caption.remove();
+                self.captionRect.remove();
+                self.captionRect2.remove();
+                self.bgRect.remove();
+
+                delete vxRoot.nodes[self.id];
             };
 
             this.move = function(nx, ny)
@@ -413,7 +554,7 @@
 
 
                 self.caption.attr({
-                    x: newPos.x + 35,
+                    x: newPos.x + 10,
                     y: newPos.y + 15
                 });
 
@@ -589,7 +730,7 @@
 
                 return {
                     id: vxNode.id,
-                    type: vxNode.config.name,
+                    component: vxNode.config.component,
                     children: _.map(wiredInputSockets, function(inputSocket)
                     {
                         var wiresIdsArray = _.keys(inputSocket.wires);
@@ -617,8 +758,11 @@
 
             return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
         }
+
+        // init VX
+        this.init();
     } // function VX
 
     window.VX = VX;
 }
-)(window, _);
+)(window, _, jQuery);

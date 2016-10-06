@@ -4,92 +4,21 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <script src="underscore.js" type="text/javascript"></script>
     <script src="raphael.js" type="text/javascript"></script>
+    <script src="jquery.js" type="text/javascript"></script>
     <script src="vx.js" type="text/javascript"></script>
-    <style type="text/css">
-        html, body {
-            background: url("bg.jpg") #222;
-        }
-    </style>
+    <script src="schema.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="styles.css" type="text/css"/>
 </head>
 <body>
+<div class="vx-help">
+    <ul>
+        <li>Press X to add a new node</li>
+        <li>Double click a node or a wire to remove it</li>
+    </ul>
+</div>
 <script type="text/javascript">
-var r = Raphael(0, 0, 2560, 1440);
-
-var myVX = new VX(r);
-
-
-var first = myVX.createNode({
-    name: "PlusNode",
-    width: 100,
-    height: 150,
-    x: 500,
-    y: 300,
-    inputSockets: [
-        {
-            name: "A"
-        },
-        {
-            name: "B"
-        }
-    ],
-    outputSockets: [
-        {name: "O"}
-    ]
-});
-
-var second = myVX.createNode({
-    name: "SubNode",
-    width: 100,
-    height: 150,
-    x: 500,
-    y: 510,
-    inputSockets: [
-        {
-            name: "A"
-        },
-        {
-            name: "B"
-        }
-    ],
-    outputSockets: [
-        {name: "O"}
-    ]
-});
-
-var thirst = myVX.createNode({
-    name: "Input1",
-    width: 100,
-    height: 100,
-    x: 250,
-    y: 250,
-    outputSockets: [
-        {name: "O"}
-    ]
-});
-
-var n4 = myVX.createNode({
-    name: "Input2",
-    width: 100,
-    height: 100,
-    x: 200,
-    y: 450,
-    outputSockets: [
-        {name: "Output"}
-    ]
-});
-
-var n5 = myVX.createNode({
-    name: "Output",
-    width: 100,
-    height: 100,
-    x: 700,
-    y: 350,
-    inputSockets: [
-        {name: "Input"}
-    ]
-});
-
-
+    var r = Raphael(0, 0, 2560, 1440);
+    var myVX = new VX(r, {schema: vxSchema});
 </script>
 </body>
 </html>

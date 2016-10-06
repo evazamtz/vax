@@ -1,0 +1,41 @@
+html, body {
+    background: url("bg.jpg") #222;
+}
+
+.vx-component-selector {
+    position: absolute;
+    width: 200px;
+    height: auto;
+    background: #111;
+    border:2px solid black;
+    border-radius: 2px;
+    padding: 0px;
+    box-shadow: #111 0 0 5px 2px;
+}
+
+    .vx-component {
+        color: white;
+        margin: 2px 0;
+        border-bottom: 1px solid #444;
+        padding: 5px;
+        font-family: "Tahoma";
+        font-size: 10pt;
+        font-weight: bold;
+        cursor: pointer;
+    }
+        .vx-component:hover {
+            background: orange;
+            color: black;
+        }
+
+
+.vx-help {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    color: white;
+    font-family: "Georgia";
+    font-variant: small-caps;
+    font-weight: bold;
+    font-size: 14pt;
+}
