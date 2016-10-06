@@ -290,10 +290,20 @@
             }
 
             var $wrapper = self.$selector = $('<div class="vx-component-selector">');
+            $wrapper.append($('<div class="vx-title"/>').text("Choose a component..."));
 
             _.each(self.schema.components, function(component, name)
             {
-                $wrapper.append($('<div class="vx-component"/>').text(component.title).attr('data-vx-component', name));
+                var $component = $('<div class="vx-component"/>').attr('data-vx-component', name);
+
+                var text = component.title;
+                if (component.typeParams && component.typeParams.length > 0)
+                {
+                    text = text + ' [' + component.typeParams.join(', ') + ']';
+                }
+                $component.text(text);
+
+                $wrapper.append($component);
             });
 
             $wrapper.on('click', 'div', function()
@@ -303,10 +313,82 @@
 
                 var component = $this.attr('data-vx-component');
 
-                var nodeConfig = self.schema.components[component];
+                var componentConfig = self.schema.components[component];
 
+                // shallow clone
+                var nodeConfig = _.clone(componentConfig);
+
+                // deep clone
+                nodeConfig.inputSockets  = [];
+                _.each(componentConfig.inputSockets, function(socket)
+                {
+                    nodeConfig.inputSockets.push(_.clone(socket));
+                });
+
+                nodeConfig.outputSockets  = [];
+                _.each(componentConfig.outputSockets, function(socket)
+                {
+                    nodeConfig.outputSockets.push(_.clone(socket));
+                });
+
+                nodeConfig.attributes  = [];
+                _.each(componentConfig.attributes, function(socket)
+                {
+                    nodeConfig.attributes.push(_.clone(socket));
+                });
+
+
+                // update mouse pos
                 nodeConfig.x = self.mouseX;
                 nodeConfig.y = self.mouseY;
+
+                if (nodeConfig.typeParams && nodeConfig.typeParams.length > 0)
+                {
+                    if (nodeConfig.typeParams.length == 1)
+                    {
+                        var paramName = nodeConfig.typeParams[0];
+                        nodeConfig.typeInstances = {};
+                        nodeConfig.typeInstances[paramName] = prompt('Input type name for parameter ' + paramName, 'Any');
+
+
+                        var subUpdate = function(subConf)
+                        {
+                            subConf.type = subConf.type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
+                            subConf.parsedType = vx.parseType(subConf.type);
+                            subConf.color = vxRoot.getColorOfParsedType(subConf.parsedType);
+                        };
+
+                        _.each(nodeConfig.inputSockets,  subUpdate);
+                        _.each(nodeConfig.outputSockets, subUpdate);
+                        _.each(nodeConfig.attributes,    subUpdate);
+
+
+                        /*
+                        for (var k in nodeConfig.inputSockets)
+                        {
+                            nodeConfig.inputSockets[k].type = nodeConfig.inputSockets[k].
+                            nodeConfig.inputSockets[k].parsedType = vx.parseType(nodeConfig.inputSockets[k].type);
+                        }
+
+                        // out
+                        for (k in nodeConfig.outputSockets)
+                        {
+                            nodeConfig.outputSockets[k].type = nodeConfig.outputSockets[k].type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
+                            nodeConfig.outputSockets[k].parsedType = vx.parseType(nodeConfig.outputSockets[k].type);
+                        }
+
+                        // attrs
+                        for (k in nodeConfig.attributes)
+                        {
+                            nodeConfig.attributes[k].type = nodeConfig.attributes[k].type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
+                            nodeConfig.attributes[k].parsedType = vx.parseType(nodeConfig.attributes[k].type);
+                        }*/
+                    }
+                    else
+                    {
+                        return alert("Multiple type params are not yet supported");
+                    }
+                }
 
                 vxRoot.createNode(nodeConfig);
 
@@ -447,10 +529,10 @@
                                     if (!(targetSocketObj.isInput() && targetSocketObj.isWired()))
                                     {
                                         // check type compatibility
-                                        var inputParsedType  = self.isInput() ? self.config.parsedType : targetSocket.data("parsedType");
-                                        var outputParsedType = self.isInput() ? targetSocket.data("parsedType") : self.config.parsedType;
+                                        var inputParsedType  = self.isInput() ? self.config.parsedType : targetSocket.data("socketParsedType");
+                                        var outputParsedType = self.isInput() ? targetSocket.data("socketParsedType") : self.config.parsedType;
 
-                                        if (vxRoot.areParsedTypesCompatibile(inputParsedType, outputParsedType))
+                                        if (vxRoot.areParsedTypesCompatible(inputParsedType, outputParsedType))
                                         {
                                             vxRoot.wire(self.id, targetSocket.data("socketId"));
                                         }
@@ -619,7 +701,7 @@
                 self.caption.attr('text-anchor', 'start');
 
                 self.caption.attr({
-                    "fill": self.config.color,
+                    "fill": "#fff",
                     "font-family": "Tahoma",
                     "font-size": "12pt",
                     "font-weight": "bold",
@@ -694,7 +776,9 @@
                 y: 0,
                 attributes: {},
                 inputSockets: {},
-                outputSockets: {}
+                outputSockets: {},
+                typeParams: [],
+                typeInstances: {}
             });
 
             this.getVX = function()
@@ -735,7 +819,13 @@
                     "stroke-width": 0
                 });
 
-                self.caption = raphael.text(self.config.x + 10, self.config.y + 15, self.config.title);
+                var nodeTitle = self.config.title;
+                if (self.config.typeParams.length > 0)
+                {
+                    nodeTitle = nodeTitle + ' [' + _.toArray(self.config.typeInstances).join(',') + ']';
+                }
+
+                self.caption = raphael.text(self.config.x + 10, self.config.y + 15, nodeTitle);
                 self.caption.attr({
                     "font-family": "Tahoma",
                     "font-size": "12pt",

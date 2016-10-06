@@ -22,13 +22,6 @@ var vxSchema = {
       "typeParams": [
         "T"
       ]
-    },
-    "Pair": {
-      "color": "#f0f",
-      "typeParams": [
-        "A",
-        "B"
-      ]
     }
   },
   "components": {
@@ -37,16 +30,19 @@ var vxSchema = {
       "color": "0-#495-#075:20-#335",
       "width": 150,
       "height": 80,
+      "typeParams": [
+        "T"
+      ],
       "attrs": {
         "V": {
           "title": "Value",
-          "type": "Numeric",
+          "type": "@T",
           "default": 0
         }
       },
       "out": {
         "O": {
-          "type": "Numeric"
+          "type": "@T"
         }
       }
     },
@@ -149,6 +145,45 @@ var vxSchema = {
         }
       }
     },
+    "GreaterThan": {
+      "title": ">",
+      "typeParams": [
+        "T"
+      ],
+      "in": {
+        "A": {
+          "type": "@T"
+        },
+        "B": {
+          "type": "@T"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "Boolean"
+        }
+      }
+    },
+    "Replicate": {
+      "typeParams": [
+        "T"
+      ],
+      "in": {
+        "V": {
+          "title": "What",
+          "type": "@T"
+        },
+        "N": {
+          "title": "# of times",
+          "type": "Int"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "Array[@T]"
+        }
+      }
+    },
     "ArrayLength": {
       "title": "Array.length",
       "in": {
@@ -163,19 +198,30 @@ var vxSchema = {
         }
       }
     },
-    "First": {
-      "title": "First of pair",
-      "typeParams": [
-        "A"
-      ],
+    "NumericToString": {
       "in": {
-        "P": {
-          "type": "Pair[@A,Any]"
+        "N": {
+          "type": "Numeric"
         }
       },
       "out": {
-        "R": {
-          "type": "@A"
+        "O": {
+          "type": "String"
+        }
+      }
+    },
+    "ConcatStrings": {
+      "in": {
+        "A": {
+          "type": "String"
+        },
+        "B": {
+          "type": "String"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "String"
         }
       }
     },
@@ -186,9 +232,9 @@ var vxSchema = {
       "title": "Result",
       "in": {
         "I": {
-          "type": "Numeric"
+          "type": "String"
         }
       }
     }
   }
-}
+};

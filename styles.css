@@ -4,7 +4,7 @@ html, body {
 
 .vx-component-selector {
     position: absolute;
-    width: 200px;
+    width: 220px;
     height: auto;
     background: #111;
     border:2px solid black;
@@ -12,6 +12,16 @@ html, body {
     padding: 0px;
     box-shadow: #111 0 0 5px 2px;
 }
+    .vx-title {
+        color: gray;
+        font-family: "Georgia";
+        font-variant: small-caps;
+        font-weight: bold;
+        font-size: 12pt;
+        margin: 2px 0;
+        border-bottom: 3px solid #444;
+        padding: 5px;
+    }
 
     .vx-component {
         color: white;
