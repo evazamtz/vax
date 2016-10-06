@@ -105,7 +105,7 @@
                 $wrapper.remove();
             });
 
-            $wrapper.offset({left: self.mouseX, top: self.mouseY});
+            $wrapper.offset({left: self.mouseX - 3, top: self.mouseY - 3});
             $('body').append($wrapper);
         };
 
