@@ -97,12 +97,12 @@ components:
       Condition:
         type: Boolean
       onTrue:
-        type: @T
+        type: "@T"
       onFalse:
-        type: @T
+        type: "@T"
     out:
       O:
-        type: @T
+        type: "@T"
 
   ArrayLength: # accepts parametrized type, but itself is not parametrized
     title: "Array.length"
@@ -119,7 +119,7 @@ components:
     typeParams: [A]
     in:
       P:
-        type: Pair[@A,List[Option[Any]]]
+        type: Pair[@A,Any]
     out:
       R:
         type: @A

@@ -3,7 +3,9 @@
     // static helper
     var idCounter = 1;
 
-    window.vx = {
+    window.vx = {};
+
+    vx = _.extend(vx, {
 
         genNextId: function()
         {
@@ -29,12 +31,12 @@
         {
             whole = whole || str;
 
-            var re = /^\s*([A-Z]\w+)\s*(\[\s*(.*)\s*\]\s*)?$/; // we have 4 matching
+            var re = /^\s*(@?[A-Z]\w*)\s*(\[\s*(.*)\s*\]\s*)?$/; // we have 4 matching
             var matches = re.exec(str);
 
             if (!matches)
             {
-                throw new Error("Invalid type signature: " + whole);
+                throw new Error("Invalid type signature of '" + str + "' in '" + whole + "'");
             }
 
             if (!matches[2]) // simple type
@@ -51,7 +53,7 @@
             }
         },
 
-        parseSchemaTypes: function(schema)
+        buildSchemaTypes: function(schema)
         {
             var typesConfig = schema.types || {};
 
@@ -108,7 +110,74 @@
 
             return types;
         },
-    };
+
+        buildSchemaComponents: function(schema, types)
+        {
+            var componentsConfig = schema.components || {};
+
+            var components = {};
+
+            _.each(componentsConfig, function(componentConfig, name)
+            {
+                var component = _.defaults(componentConfig, {
+                    component: name,
+                    title: name,
+                    color: "0-#490-#070:20-#333",
+                    width: 100,
+                    height: 100,
+                    typeParams: [],
+                    inputSockets: [],
+                    attributes: [],
+                    outputSockets: [],
+                    typeInstances: {}
+                });
+
+                var mapSubConfig = function(subConfig, name)
+                {
+                    var sub = _.defaults(subConfig, {
+                        name: name,
+                        title: name,
+                        type: 'Any',
+                        default: ''
+                    });
+
+                    var parsedType = vx.parseType(sub.type);
+                    if (!vx.isValidType(parsedType, types))
+                    {
+                        throw new Error("Invalid type: " + sub.type);
+                    }
+
+                    sub.parsedType = parsedType;
+
+                    return sub;
+                };
+
+                component.inputSockets  = _.map(componentConfig.in    || {}, mapSubConfig);
+                component.outputSockets = _.map(componentConfig.out   || {}, mapSubConfig);
+                component.attributes    = _.map(componentConfig.attrs || {}, mapSubConfig);
+
+                components[name] = component;
+            });
+
+            return components;
+        },
+
+        isValidType: function isValidType(type, types)
+        {
+            if (!_.isObject(type))
+            {
+                return type.substring(0, 1) == '@' || (types.hasOwnProperty(type));
+            }
+            else
+            {
+                var typeName = type.name;
+                var typeParams = type.typeParams;
+
+                return isValidType(typeName, types) && _.every(typeParams, function(typeParam) { return isValidType(typeParam, types)});
+            }
+        }
+
+    }); // vx.extend
 
     // VX class
     function VX(raphael, config)
@@ -126,10 +195,10 @@
             lang: {}
         });
 
-        this.schema = {
-            types: vx.parseSchemaTypes(this.config.schema),
-            components: this.config.schema.components,
-        };
+        this.schema = {};
+
+        this.schema.types = vx.buildSchemaTypes(this.config.schema);
+        this.schema.components = vx.buildSchemaComponents(this.config.schema, this.schema.types);
 
         this.nodes = {};
         this.sockets = {};
@@ -176,7 +245,7 @@
 
                 var component = $this.attr('data-vx-component');
 
-                var nodeConfig = self.translateNodeConfig(component, self.schema.components[component]);
+                var nodeConfig = self.schema.components[component];
 
                 nodeConfig.x = self.mouseX;
                 nodeConfig.y = self.mouseY;
@@ -196,45 +265,13 @@
             $('body').append($wrapper);
         };
 
-        this.translateNodeConfig = function(component, nodeConfig)
-        {
-            nodeConfig.component = component;
-            nodeConfig.title = nodeConfig.title || component;
-
-            nodeConfig.inputSockets = _.map(nodeConfig.in || {}, function(socket, name)
-            {
-                return _.defaults(socket, {
-                    name: name,
-                    title: name
-                });
-            });
-
-            nodeConfig.attributes = _.map(nodeConfig.attrs || {}, function(attr, name)
-            {
-                return _.defaults(attr, {
-                    name: name,
-                    title: name
-                });
-            });
-
-            nodeConfig.outputSockets = _.map(nodeConfig.out || {}, function(socket, name)
-            {
-                return _.defaults(socket, {
-                    name: name,
-                    title: name
-                });
-            });
-
-            return nodeConfig;
-        };
-
         this.createNode = function(config)
         {
             var newId = "VxNode-" + vx.genNextId();
             this.nodes[newId] = new VxNode(newId, config);
         };
 
-        function VxSocket(id, node, nodeIndex, config, type)
+        function VxSocket(id, node, nodeIndex, config, kind)
         {
             var self = this;
 
@@ -251,7 +288,8 @@
                 name: "",
                 title: "",
             });
-            this.type = type;
+
+            this.kind = kind;
 
             this.wires = {};
 
@@ -260,7 +298,7 @@
                 var nodeX = self.node.getX();
                 var nodeY = self.node.getY();
 
-                var circle = (self.type == 'input')
+                var circle = self.isInput()
                     ? raphael.circle(nodeX, nodeY + (self.nodeIndex + 1) * 20 + 30, 5)
                     : raphael.circle(nodeX + self.node.getWidth(), nodeY + self.node.getHeight() - (self.nodeIndex + 1) * 20, 5);
 
@@ -300,7 +338,7 @@
                     fill: '#000',
                 });
                 self.circle.data("vxType", "socket");
-                self.circle.data("socketType", self.type);
+                self.circle.data("socketType", self.kind);
                 self.circle.data("nodeId", self.node.getId());
                 self.circle.data("socketId", self.id);
 
@@ -453,12 +491,12 @@
 
             this.isInput = function()
             {
-                return self.type === "input";
+                return self.kind === "input";
             };
 
             this.isOutput = function()
             {
-                return self.type === "output";
+                return self.kind === "output";
             };
 
             this.isWired = function() {

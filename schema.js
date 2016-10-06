@@ -169,7 +169,7 @@ var vxSchema = {
       ],
       "in": {
         "P": {
-          "type": "Pair[@A,List[Option[Any]]]"
+          "type": "Pair[@A,Any]"
         }
       },
       "out": {
@@ -190,4 +190,4 @@ var vxSchema = {
       }
     }
   }
-};
+}
