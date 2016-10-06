@@ -23,6 +23,32 @@
                 'S', x1 + dx, y1, x1 + 2 * dx, y1 + 2 * dy,
                 'S', x2, y2 - dy, x2, y2
             ]);
+        },
+
+        parseType: function parseType(str, whole)
+        {
+            whole = whole || str;
+
+            var re = /^([A-Z]\w+)\s*(\[\s*(.*)\s*\]\s*)?$/; // we have 4 matching
+            var matches = re.exec(str);
+
+            if (!matches)
+            {
+                throw new Error("Invalid type signature: " + whole);
+            }
+
+            if (!matches[2]) // simple type
+            {
+                return str;
+            }
+            else // parametrized type
+            {
+                var params = matches[3].split(',');
+                return {
+                    name: matches[1],
+                    typeParams: _.map(params, function(param) {return parseType(param, whole); })
+                }
+            }
         }
     };
 
