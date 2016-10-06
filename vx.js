@@ -29,7 +29,7 @@
         {
             whole = whole || str;
 
-            var re = /^([A-Z]\w+)\s*(\[\s*(.*)\s*\]\s*)?$/; // we have 4 matching
+            var re = /^\s*([A-Z]\w+)\s*(\[\s*(.*)\s*\]\s*)?$/; // we have 4 matching
             var matches = re.exec(str);
 
             if (!matches)
@@ -49,7 +49,65 @@
                     typeParams: _.map(params, function(param) {return parseType(param, whole); })
                 }
             }
-        }
+        },
+
+        parseSchemaTypes: function(schema)
+        {
+            var typesConfig = schema.types || {};
+
+            var types = {
+                Any: {
+                    color: "#fff",
+                    extends: [],
+                    typeParams: []
+                }
+            };
+
+            _.each(typesConfig, function(type, name)
+            {
+                if (name == 'Any')
+                {
+                    throw new Error("Type 'Any' is reserved.");
+                }
+
+                var allExtends = ['Any'];
+
+                if (type && type.extends)
+                {
+                    // normalize extends
+                    if (!_.isArray(type.extends))
+                    {
+                        type.extends = [type.extends];
+                    }
+
+                    _.each(type.extends, function(typeToExtend)
+                    {
+                        if (typeToExtend in types)
+                        {
+                            allExtends.push(typeToExtend);
+                            allExtends = allExtends.concat(types[typeToExtend.extends]);
+                        }
+                        else
+                        {
+                            throw new Error("Type '" + typeToExtend + "' wasn't found!");
+                        }
+                    });
+                }
+
+                if (type.typeParams && (!_.isArray(type.typeParams) || type.typeParams.length == 0))
+                {
+                    throw new Error("Type params should a plain array with length > 0!");
+                }
+
+                types[name] = {
+                    color: type.color || "#fff",
+                    extends: _.filter(_.unique(allExtends, false)),
+                    typeParams: type.typeParams || [],
+                };
+            });
+
+            return types;
+        },
     };
 
     // VX class
@@ -68,7 +126,10 @@
             lang: {}
         });
 
-        this.schema = this.config.schema;
+        this.schema = {
+            types: vx.parseSchemaTypes(this.config.schema),
+            components: this.config.schema.components,
+        };
 
         this.nodes = {};
         this.sockets = {};

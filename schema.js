@@ -1,20 +1,30 @@
 var vxSchema = {
   "types": {
-    "Numeric": {},
+    "Numeric": {
+      "color": "#fff"
+    },
     "Int": {
-      "extends": "Numeric"
+      "extends": "Numeric",
+      "color": "#fff"
     },
     "Float": {
-      "extends": "Numeric"
+      "extends": "Numeric",
+      "color": "#fff"
     },
-    "String": {},
-    "Boolean": {},
+    "String": {
+      "color": "#f30"
+    },
+    "Boolean": {
+      "color": "#00f"
+    },
     "Array": {
+      "color": "#0ff",
       "typeParams": [
         "T"
       ]
     },
     "Pair": {
+      "color": "#f0f",
       "typeParams": [
         "A",
         "B"
@@ -143,7 +153,7 @@ var vxSchema = {
       "in": {
         "A": {
           "title": "Array",
-          "type": "Array[T]"
+          "type": "Array[Any]"
         }
       },
       "out": {
@@ -159,7 +169,7 @@ var vxSchema = {
       ],
       "in": {
         "P": {
-          "type": "Pair[@A,B]"
+          "type": "Pair[@A,List[Option[Any]]]"
         }
       },
       "out": {

@@ -1,15 +1,22 @@
 types:
   # Any type is considered as super type
-  Numeric: {}
+  Numeric:
+    color: "#fff"
   Int:
     extends: Numeric
+    color: "#fff"
   Float:
     extends: Numeric
-  String: {}
-  Boolean: {}
+    color: "#fff"
+  String:
+    color: "#f30"
+  Boolean:
+    color: "#00f"
   Array:
-    typeParams: [T]
+    color: "#0ff"
+    typeParams: [T] # TODO: support nonvariance, covariance, countervariance
   Pair:
+    color: "#f0f"
     typeParams: [A,B]
 
 components:
@@ -102,7 +109,7 @@ components:
     in:
       A:
         title: Array
-        type: Array[T]
+        type: Array[Any]
     out:
       O:
         type: Int
@@ -112,7 +119,7 @@ components:
     typeParams: [A]
     in:
       P:
-        type: Pair[@A,B]
+        type: Pair[@A,List[Option[Any]]]
     out:
       R:
         type: @A
