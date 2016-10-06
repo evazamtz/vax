@@ -868,6 +868,8 @@
                     nodeAttrs[attr.config.name] = attr.value;
                 });
 
+                var newParentsIds = _.union(parentsIds, [vxNode.id]);
+
                 // collect links
                 var links = {};
                 _.each(wiredInputSockets, function(inputSocket) {
@@ -881,9 +883,9 @@
 
                     var outputSocket = vxRoot.sockets[wire.outputSocketId];
 
-                    parentsIds.push(vxNode.id);
 
-                    links[inputSocket.config.name] = composeTree(vxRoot.nodes[outputSocket.node.id], parentsIds, outputSocket.config.name);
+
+                    links[inputSocket.config.name] = composeTree(vxRoot.nodes[outputSocket.node.id], newParentsIds, outputSocket.config.name);
                 });
 
                 // return node data
