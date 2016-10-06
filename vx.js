@@ -53,7 +53,79 @@
             }
         },
 
-        buildSchemaTypes: function(schema)
+
+
+    }); // vx.extend
+
+    // VX class
+    function VX(raphael, config)
+    {
+        var vxRoot = this;
+
+        this.raphael = raphael;
+
+        this.config = _.defaults(config, {
+            schema: {
+                types: {},
+                components: {} // elements,nodes?
+            },
+            skin: {}, // theme. ui
+            lang: {}
+        });
+
+        this.schema = {};
+
+        this.isValidType = function isValidType(type)
+        {
+            if (!_.isObject(type))
+            {
+                return type.substring(0, 1) == '@' || (vxRoot.schema.types.hasOwnProperty(type));
+            }
+            else
+            {
+                var typeName = type.name;
+                var typeParams = type.typeParams;
+
+                return isValidType(typeName) && _.every(typeParams, function(typeParam) { return isValidType(typeParam)});
+            }
+        };
+
+        this.areParsedTypesCompatible = function areParsedTypesCompatible(inputType, outputType)
+        {
+            var isSimpleOutputType = !_.isObject(outputType);
+            var isSimpleInputType  = !_.isObject(inputType);
+
+            if (isSimpleInputType && isSimpleOutputType) // both simple
+            {
+                return (inputType === outputType) || _.some(vxRoot.schema.types[outputType].extends, function(extType) { return extType == inputType;});
+            }
+            else if (isSimpleInputType && !isSimpleOutputType) // input = simple, output = paramtrized
+            {
+                return _.some(vxRoot.schema.types[outputType.name].extends, function(extType) { return extType == inputType;});
+            }
+            else if (!isSimpleOutputType && isSimpleInputType) // input = paramtrized, output = simple
+            {
+                return false;
+            }
+            else // both are parametrized
+            {
+                // check if they are same
+                if (inputType.name !== outputType.name)
+                {
+                    return false;
+                }
+
+                // TODO: later add support for different wrapping classes
+
+                // for each type params
+                return _.every(inputType.typeParams, function(inputTypeParam, index)
+                {
+                    return areParsedTypesCompatible(inputTypeParam, outputType.typeParams[index]);
+                });
+            }
+        };
+
+        this.buildSchemaTypes = function(schema)
         {
             var typesConfig = schema.types || {};
 
@@ -109,9 +181,9 @@
             });
 
             return types;
-        },
+        };
 
-        buildSchemaComponents: function(schema, types)
+        this.buildSchemaComponents = function(schema)
         {
             var componentsConfig = schema.components || {};
 
@@ -135,6 +207,7 @@
                 var mapSubConfig = function(subConfig, name)
                 {
                     var sub = _.defaults(subConfig, {
+                        color: '#fff',
                         name: name,
                         title: name,
                         type: 'Any',
@@ -142,12 +215,13 @@
                     });
 
                     var parsedType = vx.parseType(sub.type);
-                    if (!vx.isValidType(parsedType, types))
+                    if (!vxRoot.isValidType(parsedType))
                     {
                         throw new Error("Invalid type: " + sub.type);
                     }
 
                     sub.parsedType = parsedType;
+                    sub.color = vxRoot.getColorOfParsedType(parsedType);
 
                     return sub;
                 };
@@ -160,45 +234,29 @@
             });
 
             return components;
-        },
+        };
 
-        isValidType: function isValidType(type, types)
+        this.getColorOfParsedType = function(parsedType)
         {
-            if (!_.isObject(type))
+            var rootTypeName = _.isObject(parsedType) ? parsedType.name : parsedType;
+
+            if (rootTypeName.substring(0, 1) == '@')
             {
-                return type.substring(0, 1) == '@' || (types.hasOwnProperty(type));
+                return '#fff';
             }
-            else
+
+            var type = vxRoot.schema.types[rootTypeName];
+
+            if (!type)
             {
-                var typeName = type.name;
-                var typeParams = type.typeParams;
-
-                return isValidType(typeName, types) && _.every(typeParams, function(typeParam) { return isValidType(typeParam, types)});
+                throw new Error("Type " + rootTypeName + " wasn't found!");
             }
-        }
 
-    }); // vx.extend
+            return type.color;
+        };
 
-    // VX class
-    function VX(raphael, config)
-    {
-        var vxRoot = this;
-
-        this.raphael = raphael;
-
-        this.config = _.defaults(config, {
-            schema: {
-                types: {},
-                components: {} // elements,nodes?
-            },
-            skin: {}, // theme. ui
-            lang: {}
-        });
-
-        this.schema = {};
-
-        this.schema.types = vx.buildSchemaTypes(this.config.schema);
-        this.schema.components = vx.buildSchemaComponents(this.config.schema, this.schema.types);
+        this.schema.types = this.buildSchemaTypes(this.config.schema);
+        this.schema.components = this.buildSchemaComponents(this.config.schema, this.schema.types);
 
         this.nodes = {};
         this.sockets = {};
@@ -283,6 +341,7 @@
             this.node = node;
             this.vx = node.getVX();
             this.nodeIndex = nodeIndex;
+
             this.config = _.defaults(config, {
                 color: "#fff",
                 name: "",
@@ -312,12 +371,12 @@
 
                 if (self.isInput())
                 {
-                    self.caption = raphael.text(cx + 10, cy, self.config.title);
+                    self.caption = raphael.text(cx + 10, cy, self.config.title + " | " + self.config.type);
                     self.caption.attr('text-anchor', 'start');
                 }
                 else
                 {
-                    self.caption = raphael.text(cx - 10, cy, self.config.title);
+                    self.caption = raphael.text(cx - 10, cy, self.config.type + " | " + self.config.title);
                     self.caption.attr('text-anchor', 'end');
                 }
 
@@ -338,9 +397,10 @@
                     fill: '#000',
                 });
                 self.circle.data("vxType", "socket");
-                self.circle.data("socketType", self.kind);
+                self.circle.data("socketKind", self.kind);
                 self.circle.data("nodeId", self.node.getId());
                 self.circle.data("socketId", self.id);
+                self.circle.data("socketParsedType", self.config.parsedType);
 
                 self.createCaption();
 
@@ -358,13 +418,13 @@
                         this.drawWire = raphael.path(vx.buildWirePath(cx, cy, nx, ny));
                         this.drawWire.toBack();
                         this.drawWire.attr({
-                            'stroke': '#fff',
+                            'stroke': self.config.color,
                             'stroke-width': 3,
                         });
                     },
                     // start dragging
                     function (x, y) {
-                        self.circle.attr({fill: '#fff'});
+                        self.circle.attr({fill: self.config.color});
                     },
                     // end
                     function (evt) {
@@ -376,16 +436,24 @@
                         var targetSocket = raphael.getElementByPoint(evt.clientX, evt.clientY);
                         if (targetSocket)  // we have a target
                         {
-                            if (targetSocket.data("vxType") === "socket") {
-                                if (targetSocket.data("socketType") !== self.type && targetSocket.data("socketId") !== self.id && targetSocket.data("nodeId") !== self.node.getId()) {
+                            if (targetSocket.data("vxType") === "socket")
+                            {
+                                // different kinds, not the same socket/node
+                                if (targetSocket.data("socketKind") !== self.kind && targetSocket.data("socketId") !== self.id && targetSocket.data("nodeId") !== self.node.getId())
+                                {
 
-                                    // different types, not the same socket/node
-
-                                    // last check if we dont wire more than 1 time an output socket
+                                    // check if we dont wire more than 1 time an output socket
                                     var targetSocketObj = vxRoot.sockets[targetSocket.data("socketId")];
                                     if (!(targetSocketObj.isInput() && targetSocketObj.isWired()))
                                     {
-                                        vxRoot.wire(self.id, targetSocket.data("socketId"));
+                                        // check type compatibility
+                                        var inputParsedType  = self.isInput() ? self.config.parsedType : targetSocket.data("parsedType");
+                                        var outputParsedType = self.isInput() ? targetSocket.data("parsedType") : self.config.parsedType;
+
+                                        if (vxRoot.areParsedTypesCompatibile(inputParsedType, outputParsedType))
+                                        {
+                                            vxRoot.wire(self.id, targetSocket.data("socketId"));
+                                        }
                                     }
                                 }
                             }
@@ -459,7 +527,7 @@
             this.wire = function(wireId)
             {
                 self.wires[wireId] = true;
-                self.circle.attr({fill:'#fff'});
+                self.circle.attr({fill: self.config.color});
             };
 
             this.hasWire = function(wireId)
@@ -936,7 +1004,7 @@
                 self.path = raphael.path(vx.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY()));
                 self.path.toBack();
                 self.path.attr({
-                    'stroke': '#fff',
+                    'stroke': s2.config.color, // color of output socket
                     'stroke-width': 3,
                     'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId
                 });

@@ -11,7 +11,7 @@ types:
   String:
     color: "#f30"
   Boolean:
-    color: "#00f"
+    color: "#05f"
   Array:
     color: "#0ff"
     typeParams: [T] # TODO: support nonvariance, covariance, countervariance
@@ -38,7 +38,7 @@ components:
     title: "+"
     color: "0-#490-#070:20-#333"
     width: 100
-    height: 100
+    height: 130
     in:
       A:
         type: Numeric
@@ -52,7 +52,7 @@ components:
     title: "-"
     color: "0-#490-#070:20-#333"
     width: 100
-    height: 100
+    height: 130
     in:
       A:
         type: Numeric
@@ -66,7 +66,7 @@ components:
     title: "*"
     color: "0-#490-#070:20-#333"
     width: 100
-    height: 100
+    height: 130
     in:
       A:
         type: Numeric
@@ -80,7 +80,7 @@ components:
     title: "/"
     color: "0-#490-#070:20-#333"
     width: 100
-    height: 100 # we should support 'auto mode' // width of widest string/attr picket, + number of sockets + attrs * a value :)
+    height: 130 # we should support 'auto mode' // width of widest string/attr picket, + number of sockets + attrs * a value :)
     in:
       A:
         type: Numeric
@@ -93,6 +93,7 @@ components:
   If:
     title: "If"
     typeParams: [T] # idea of parameterized components
+    height: 200
     in:
       Condition:
         type: Boolean

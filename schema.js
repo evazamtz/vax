@@ -15,7 +15,7 @@ var vxSchema = {
       "color": "#f30"
     },
     "Boolean": {
-      "color": "#00f"
+      "color": "#05f"
     },
     "Array": {
       "color": "#0ff",
@@ -54,7 +54,7 @@ var vxSchema = {
       "title": "+",
       "color": "0-#490-#070:20-#333",
       "width": 100,
-      "height": 100,
+      "height": 130,
       "in": {
         "A": {
           "type": "Numeric"
@@ -73,7 +73,7 @@ var vxSchema = {
       "title": "-",
       "color": "0-#490-#070:20-#333",
       "width": 100,
-      "height": 100,
+      "height": 130,
       "in": {
         "A": {
           "type": "Numeric"
@@ -92,7 +92,7 @@ var vxSchema = {
       "title": "*",
       "color": "0-#490-#070:20-#333",
       "width": 100,
-      "height": 100,
+      "height": 130,
       "in": {
         "A": {
           "type": "Numeric"
@@ -111,7 +111,7 @@ var vxSchema = {
       "title": "/",
       "color": "0-#490-#070:20-#333",
       "width": 100,
-      "height": 100,
+      "height": 130,
       "in": {
         "A": {
           "type": "Numeric"
@@ -131,6 +131,7 @@ var vxSchema = {
       "typeParams": [
         "T"
       ],
+      "height": 200,
       "in": {
         "Condition": {
           "type": "Boolean"
