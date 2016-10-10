@@ -85,3 +85,9 @@ html, body {
         text-align: right;
     }
 
+    .vx-type-picker-signature {
+        font-family: Tahoma;
+        color: orange;
+        font-size: 12pt;
+    }
+
