@@ -5,8 +5,10 @@
     <script src="underscore.js" type="text/javascript"></script>
     <script src="raphael.js" type="text/javascript"></script>
     <script src="jquery.js" type="text/javascript"></script>
+    <script src="chosen/chosen.jquery.js" type="text/javascript"></script>
     <script src="vx.js" type="text/javascript"></script>
     <script src="schema.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="chosen/chosen.min.css" type="text/css"/>
     <link rel="stylesheet" href="styles.css" type="text/css"/>
 </head>
 <body>
@@ -24,10 +26,13 @@
         <li>Double click a node caption or a wire to remove it</li>
     </ul>
 </div>
+
+
+
+
 <script type="text/javascript">
     $(function()
     {
-        // vx
         var r = Raphael(0, 0, 2560, 1440);
         window.myVX = new VX(r, {schema: vxSchema});
 
@@ -85,8 +90,69 @@
 
             alert(res);
         });
+
+        $('.vx-type-picker-select').chosen({});
+
+        $('.vx-type-picker-select').change(function()
+        {
+            var $this = $(this);
+            var val = $this.val();
+            window.console.debug(val);
+
+            var $option = $('option[value="' + val + '"]', $this);
+            var $span = $('span[data-type-n="' + $this.attr('data-type-n') +'"]');
+
+            window.console.debug('span', $span);
+
+            if ($option.attr('data-has-params'))
+            {
+                window.console.debug("T");
+
+                var $clone = $this.clone();
+
+                $clone.attr('data-type-n', 2);
+                $clone.val('Any');
+                $clone.show();
+
+
+                $span.append($('<span class="vx-type-picker-punct"> [ </span>'));
+                $span.append($clone);
+                $span.append($('<span class="vx-type-picker-punct"> ] </span>'));
+                $span.append($('<span data-type-n="2"></span>'));
+
+                $clone.chosen({});
+            }
+            else
+            {
+                // plain shit
+                $span.empty();
+            }
+            window.console.debug($option);
+        });
     });
 </script>
 <button id="eval" type="button">Eval!</button>
+
+<div class="vx-type-picker">
+    <div class="vx-type-picker-title">Pick a type ...</div>
+    <hr/>
+    <div class="vx-type-picker-type-line">
+        <select class="vx-type-picker-select" data-type="Any" data-type-n="1">
+            <option value="Any" selected="selected">Any</option>
+            <option value="Numeric">Numeric</option>
+            <option value="Int">Int</option>
+            <option value="Bool">Bool</option>
+            <option value="String">String</option>
+            <option value="Float">Float</option>
+            <option value="Array" data-has-params="true">Array [T]</option>
+        </select>
+        <span data-type-n="1"><!-- sub type --></span>
+    </div>
+    <hr/>
+    <div class="vx-type-picker-buttons">
+        <button type="button">Ok</button><button type="button">Cancel</button>
+    </div>
+</div>
+
 </body>
 </html>

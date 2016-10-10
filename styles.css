@@ -49,3 +49,39 @@ html, body {
     font-weight: bold;
     font-size: 14pt;
 }
+
+.vx-type-picker {
+    position: absolute;
+    background: #222;
+    border-radius: 5px;
+    width: auto;
+    padding: 10px;
+    z-index: 100;
+    box-shadow: #000 0 0 2px 1px;
+    left: 600px;
+
+}
+
+
+    .vx-type-picker-title {
+        color: white;
+        font-weight: bold;
+        font-size: 12pt;
+    }
+
+    .vx-type-picker-select {
+        width: 100px;
+        text-align: right;
+    }
+
+    .vx-type-picker-punct {
+        color: white;
+        font-size: 18pt;
+        vertical-align: bottom;
+        font-weight: bold;
+    }
+
+    .vx-type-picker-buttons {
+        text-align: right;
+    }
+
