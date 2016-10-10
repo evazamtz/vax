@@ -93,58 +93,86 @@
 
         $('.vx-type-picker-select').chosen({});
 
-        $('.vx-type-picker-select').change(function()
+        $(document).on('change', '.vx-type-picker-select', function()
         {
             var $this = $(this);
             var val = $this.val();
-            window.console.debug(val);
 
             var $option = $('option[value="' + val + '"]', $this);
-            var $span = $('span[data-type-n="' + $this.attr('data-type-n') +'"]');
+            var n = parseInt($this.attr('data-type-n'));
+            var $span = $('span[data-type-n="' + n +'"]');
 
-            window.console.debug('span', $span);
-
-            if ($option.attr('data-has-params'))
+            if ($option.attr('data-type-params-length'))
             {
-                window.console.debug("T");
-
-                var $clone = $this.clone();
-
-                $clone.attr('data-type-n', 2);
-                $clone.val('Any');
-                $clone.show();
-
+                var l = parseInt($option.attr('data-type-params-length'));
 
                 $span.append($('<span class="vx-type-picker-punct"> [ </span>'));
-                $span.append($clone);
-                $span.append($('<span class="vx-type-picker-punct"> ] </span>'));
-                $span.append($('<span data-type-n="2"></span>'));
 
-                $clone.chosen({});
+                for (var i = 0; i < l; ++i)
+                {
+                    var $clone = $this.clone();
+
+                    $clone.attr('data-type-n', n + i + 1);
+                    $clone.val('Any');
+                    $clone.show();
+
+                    $span.append($clone);
+                    $span.append($('<span data-type-n="' + (n + i + 1) + '"></span>'));
+
+                    if (i < l - 1)
+                    {
+                        $span.append($('<span class="vx-type-picker-punct"> , </span>'));
+                    }
+
+
+                    $clone.chosen({});
+                }
+
+                $span.append($('<span class="vx-type-picker-punct"> ] </span>'));
+
             }
             else
             {
                 // plain shit
                 $span.empty();
             }
-            window.console.debug($option);
+
+            var res = '';
+            // seriazlie type
+            $('select,.vx-type-picker-punct', $('.vx-type-picker')).each(function()
+            {
+                var $el = $(this);
+
+                if ($el.hasClass('vx-type-picker-punct'))
+                {
+                    res = res + $el.text();
+                }
+                else
+                {
+                    res = res + $el.val();
+                }
+
+                res = res.replace(' ', '');
+                $('.vx-type-picker-signature').text(res);
+            });
         });
     });
 </script>
 <button id="eval" type="button">Eval!</button>
 
 <div class="vx-type-picker">
-    <div class="vx-type-picker-title">Pick a type ...</div>
+    <div class="vx-type-picker-title">Pick a type: <span class="vx-type-picker-signature">Any</span></div>
     <hr/>
     <div class="vx-type-picker-type-line">
-        <select class="vx-type-picker-select" data-type="Any" data-type-n="1">
+        <select class="vx-type-picker-select" data-type-n="1">
             <option value="Any" selected="selected">Any</option>
             <option value="Numeric">Numeric</option>
             <option value="Int">Int</option>
             <option value="Bool">Bool</option>
             <option value="String">String</option>
             <option value="Float">Float</option>
-            <option value="Array" data-has-params="true">Array [T]</option>
+            <option value="Array" data-type-params-length="1">Array [T]</option>
+            <option value="Pair" data-type-params-length="2">Pair [A,B]</option>
         </select>
         <span data-type-n="1"><!-- sub type --></span>
     </div>
