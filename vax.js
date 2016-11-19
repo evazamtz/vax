@@ -3,9 +3,9 @@
     // static helper
     var idCounter = 1;
 
-    window.vx = {};
+    window.vax = {};
 
-    vx = _.extend(vx, {
+    vax = _.extend(vax, {
 
         genNextId: function()
         {
@@ -53,16 +53,44 @@
             }
         },
 
+    }); // vax.extend
 
-
-    }); // vx.extend
-
-    // VX class
-    function VX(raphael, config)
+    // VAX class
+    function VAX(domElementId, config)
     {
-        var vxRoot = this;
 
-        this.raphael = raphael;
+        var vaxRoot = this;
+
+        this.domElementId = domElementId;
+        var $wrapper = this.$wrapper = $('#' + domElementId);
+        $wrapper.addClass('vax-wrapper');
+
+        this.wrapperWidth = $wrapper.width();
+        this.wrapperHeight = $wrapper.height();
+
+        var scrollbarSize = 20;
+        var toolbarWidth = 60;
+
+        this.canvasWidth = this.wrapperWidth - toolbarWidth - scrollbarSize;
+        this.canvasHeight = this.wrapperHeight - scrollbarSize;
+
+        this.canvasDomElementId = domElementId + '-vax-canvas-' + vax.genNextId();
+        var $canvas = this.$canvas = $('<div id="' + this.canvasDomElementId + '" class="vax-canvas"/>');
+        $canvas.css({'width': this.canvasWidth, 'height': this.canvasHeight, 'left': toolbarWidth, 'top': 0});
+
+        $wrapper.append(this.$canvas);
+
+        this.canvasOffset = this.$canvas.offset();
+
+        // raphael view box offset (we use only pan)
+        this.viewBoxOffset = {x:0, y:0};
+
+        // prepare toolbar
+
+
+        // prepare scrollbars
+
+        var raphael = this.raphael = new Raphael(this.canvasDomElementId, this.canvasWidth, this.canvasHeight);
 
         this.config = _.defaults(config, {
             schema: {
@@ -79,7 +107,7 @@
         {
             if (!_.isObject(type))
             {
-                return type.substring(0, 1) == '@' || (vxRoot.schema.types.hasOwnProperty(type));
+                return type.substring(0, 1) == '@' || (vaxRoot.schema.types.hasOwnProperty(type));
             }
             else
             {
@@ -97,11 +125,11 @@
 
             if (isSimpleInputType && isSimpleOutputType) // both simple
             {
-                return (inputType === outputType) || _.some(vxRoot.schema.types[outputType].extends, function(extType) { return extType == inputType;});
+                return (inputType === outputType) || _.some(vaxRoot.schema.types[outputType].extends, function(extType) { return extType == inputType;});
             }
             else if (isSimpleInputType && !isSimpleOutputType) // input = simple, output = paramtrized
             {
-                return _.some(vxRoot.schema.types[outputType.name].extends, function(extType) { return extType == inputType;});
+                return _.some(vaxRoot.schema.types[outputType.name].extends, function(extType) { return extType == inputType;});
             }
             else if (!isSimpleOutputType && isSimpleInputType) // input = paramtrized, output = simple
             {
@@ -214,14 +242,14 @@
                         default: ''
                     });
 
-                    var parsedType = vx.parseType(sub.type);
-                    if (!vxRoot.isValidType(parsedType))
+                    var parsedType = vax.parseType(sub.type);
+                    if (!vaxRoot.isValidType(parsedType))
                     {
                         throw new Error("Invalid type: " + sub.type);
                     }
 
                     sub.parsedType = parsedType;
-                    sub.color = vxRoot.getColorOfParsedType(parsedType);
+                    sub.color = vaxRoot.getColorOfParsedType(parsedType);
 
                     return sub;
                 };
@@ -245,7 +273,7 @@
                 return '#fff';
             }
 
-            var type = vxRoot.schema.types[rootTypeName];
+            var type = vaxRoot.schema.types[rootTypeName];
 
             if (!type)
             {
@@ -267,8 +295,9 @@
             var self = this;
 
             $(document).mousemove(function(e) {
-                self.mouseX = e.pageX;
-                self.mouseY = e.pageY;
+                var offset = self.$canvas.offset();
+                self.mouseX = e.pageX - offset.left;
+                self.mouseY = e.pageY - offset.top;
             }).mouseover(); // call the handler immediately
 
 
@@ -280,6 +309,18 @@
             });
         };
 
+        this.getBoundingBox = function()
+        {
+            var nodesBoxes = _.map(this.nodes, function(node) { return node.getBoundingBox(); });
+            return {
+                left:   _.min( _.map(nodesBoxes, function(box) { return box.left }) ),
+                top:    _.min( _.map(nodesBoxes, function(box) { return box.top  }) ),
+
+                right:  _.max( _.map(nodesBoxes, function(box) { return box.right }) ),
+                bottom: _.max( _.map(nodesBoxes, function(box) { return box.bottom }) ),
+            };
+        };
+
         this.showSelector = function()
         {
             var self = this;
@@ -289,12 +330,12 @@
                 self.$selector.remove();
             }
 
-            var $wrapper = self.$selector = $('<div class="vx-component-selector">');
-            $wrapper.append($('<div class="vx-title"/>').text("Choose a component..."));
+            var $wrapper = self.$selector = $('<div class="vax-component-selector">');
+            $wrapper.append($('<div class="vax-title"/>').text("Choose a component..."));
 
             _.each(self.schema.components, function(component, name)
             {
-                var $component = $('<div class="vx-component"/>').attr('data-vx-component', name);
+                var $component = $('<div class="vax-component"/>').attr('data-vax-component', name);
 
                 var text = component.title;
                 if (component.typeParams && component.typeParams.length > 0)
@@ -311,7 +352,7 @@
 
                 var $this = $(this);
 
-                var component = $this.attr('data-vx-component');
+                var component = $this.attr('data-vax-component');
 
                 var componentConfig = self.schema.components[component];
 
@@ -354,8 +395,8 @@
                         var subUpdate = function(subConf)
                         {
                             subConf.type = subConf.type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
-                            subConf.parsedType = vx.parseType(subConf.type);
-                            subConf.color = vxRoot.getColorOfParsedType(subConf.parsedType);
+                            subConf.parsedType = vax.parseType(subConf.type);
+                            subConf.color = vaxRoot.getColorOfParsedType(subConf.parsedType);
                         };
 
                         _.each(nodeConfig.inputSockets,  subUpdate);
@@ -369,7 +410,7 @@
                     }
                 }
 
-                vxRoot.createNode(nodeConfig);
+                vaxRoot.createNode(nodeConfig);
 
                 $wrapper.remove();
             });
@@ -386,21 +427,21 @@
 
         this.createNode = function(config)
         {
-            var newId = "VxNode-" + vx.genNextId();
-            this.nodes[newId] = new VxNode(newId, config);
+            var newId = "VaxNode-" + vax.genNextId();
+            this.nodes[newId] = new VaxNode(newId, config);
         };
 
-        function VxSocket(id, node, nodeIndex, config, kind)
+        function VaxSocket(id, node, nodeIndex, config, kind)
         {
             var self = this;
 
-            if (!(node instanceof VxNode)) {
-                throw new Error("Instance of VxNode was expected");
+            if (!(node instanceof VaxNode)) {
+                throw new Error("Instance of VaxNode was expected");
             }
 
             this.id = id;
             this.node = node;
-            this.vx = node.getVX();
+            this.vax = node.getVAX();
             this.nodeIndex = nodeIndex;
 
             this.config = _.defaults(config, {
@@ -457,7 +498,7 @@
                     cursor: 'pointer',
                     fill: '#000',
                 });
-                self.circle.data("vxType", "socket");
+                self.circle.data("vaxType", "socket");
                 self.circle.data("socketKind", self.kind);
                 self.circle.data("nodeId", self.node.getId());
                 self.circle.data("socketId", self.id);
@@ -476,7 +517,7 @@
                         var cx = self.circle.attr("cx");
                         var cy = self.circle.attr("cy");
 
-                        this.drawWire = raphael.path(vx.buildWirePath(cx, cy, nx, ny));
+                        this.drawWire = raphael.path(vax.buildWirePath(cx, cy, nx - vaxRoot.canvasOffset.left, ny - vaxRoot.canvasOffset.top));
                         this.drawWire.toBack();
                         this.drawWire.attr({
                             'stroke': self.config.color,
@@ -497,23 +538,23 @@
                         var targetSocket = raphael.getElementByPoint(evt.clientX, evt.clientY);
                         if (targetSocket)  // we have a target
                         {
-                            if (targetSocket.data("vxType") === "socket")
+                            if (targetSocket.data("vaxType") === "socket")
                             {
                                 // different kinds, not the same socket/node
                                 if (targetSocket.data("socketKind") !== self.kind && targetSocket.data("socketId") !== self.id && targetSocket.data("nodeId") !== self.node.getId())
                                 {
 
                                     // check if we dont wire more than 1 time an output socket
-                                    var targetSocketObj = vxRoot.sockets[targetSocket.data("socketId")];
+                                    var targetSocketObj = vaxRoot.sockets[targetSocket.data("socketId")];
                                     if (!(targetSocketObj.isInput() && targetSocketObj.isWired()))
                                     {
                                         // check type compatibility
                                         var inputParsedType  = self.isInput() ? self.config.parsedType : targetSocket.data("socketParsedType");
                                         var outputParsedType = self.isInput() ? targetSocket.data("socketParsedType") : self.config.parsedType;
 
-                                        if (vxRoot.areParsedTypesCompatible(inputParsedType, outputParsedType))
+                                        if (vaxRoot.areParsedTypesCompatible(inputParsedType, outputParsedType))
                                         {
-                                            vxRoot.wire(self.id, targetSocket.data("socketId"));
+                                            vaxRoot.wire(self.id, targetSocket.data("socketId"));
                                         }
                                     }
                                 }
@@ -572,7 +613,7 @@
                 {
                     if (self.wires.hasOwnProperty(k))
                     {
-                        vxRoot.wires[k].refresh();
+                        vaxRoot.wires[k].refresh();
                     }
                 }
             };
@@ -602,7 +643,7 @@
                 {
                     if (self.wires.hasOwnProperty(k))
                     {
-                        var wire = vxRoot.wires[k];
+                        var wire = vaxRoot.wires[k];
 
                         if (this.isInput() && wire.getOutputSocketId() === targetSocketId)
                         {
@@ -649,17 +690,17 @@
             this.init();
         };
 
-        function VxAttribute(id, node, nodeIndex, config)
+        function VaxAttribute(id, node, nodeIndex, config)
         {
             var self = this;
 
-            if (!(node instanceof VxNode)) {
-                throw new Error("Instance of VxNode was expected");
+            if (!(node instanceof VaxNode)) {
+                throw new Error("Instance of VaxNode was expected");
             }
 
             this.id = id;
             this.node = node;
-            this.vx = node.getVX();
+            this.vax = node.getVAX();
             this.nodeIndex = nodeIndex;
             this.config = _.defaults(config, {
                 color: "#fff",
@@ -737,7 +778,7 @@
             this.init();
         };
 
-        function VxNode(id, config) {
+        function VaxNode(id, config) {
             var self = this;
 
             this.id = id;
@@ -750,7 +791,7 @@
                 component: null,
                 width: 100,
                 height: 100,
-                color: "0-#490-#070:20-#333", // vxRoot.config.ui.defaultNodeColor
+                color: "0-#490-#070:20-#333", // vaxRoot.config.ui.defaultNodeColor
                 x: 0,
                 y: 0,
                 attributes: {},
@@ -760,9 +801,9 @@
                 typeInstances: {}
             });
 
-            this.getVX = function()
+            this.getVAX = function()
             {
-                return this.vx;
+                return this.vax;
             };
 
             this.getId = function()
@@ -823,25 +864,25 @@
 
                 // input sockets
                 for (var i = 0; i < self.config.inputSockets.length; ++i) {
-                    var socketId = this.id + "-InputSocket-" + vx.genNextId();
-                    var inputSocket = new VxSocket(socketId, self, i, self.config.inputSockets[i], 'input');
+                    var socketId = this.id + "-InputSocket-" + vax.genNextId();
+                    var inputSocket = new VaxSocket(socketId, self, i, self.config.inputSockets[i], 'input');
                     self.inputSockets[socketId] = inputSocket;
-                    vxRoot.sockets[socketId] = inputSocket;
+                    vaxRoot.sockets[socketId] = inputSocket;
                 }
 
                 // attributes
                 for (var i = 0; i < self.config.attributes.length; ++i) {
-                    var attrId = this.id + "-Attribute-" + vx.genNextId();
-                    var attr = new VxAttribute(attrId, self, i, self.config.attributes[i]);
+                    var attrId = this.id + "-Attribute-" + vax.genNextId();
+                    var attr = new VaxAttribute(attrId, self, i, self.config.attributes[i]);
                     self.attributes[attrId] = attr;
                 }
 
                 // output sockets
                 for (var j = 0; j < self.config.outputSockets.length; ++j) {
-                    var socketId = this.id + "-OutputSocket-" + vx.genNextId();
-                    var outputSocket = new VxSocket(socketId, self, j, self.config.outputSockets[j], 'output');
+                    var socketId = this.id + "-OutputSocket-" + vax.genNextId();
+                    var outputSocket = new VaxSocket(socketId, self, j, self.config.outputSockets[j], 'output');
                     self.outputSockets[socketId] = outputSocket;
-                    vxRoot.sockets[socketId] = outputSocket;
+                    vaxRoot.sockets[socketId] = outputSocket;
                 }
 
 
@@ -873,6 +914,17 @@
                 })
             };
 
+            // bounding box {left,right,top,bottom)
+            this.getBoundingBox = function()
+            {
+                return {
+                    left:   this.moveContainer.attr('x'),
+                    top:    this.moveContainer.attr('y'),
+                    right:  this.moveContainer.attr('x') + this.moveContainer.attr('width'),
+                    bottom: this.moveContainer.attr('y') + this.moveContainer.attr('height'),
+                };
+            };
+
             // удаление
             this.remove = function()
             {
@@ -881,7 +933,7 @@
                     // remove wires
                     _.each(_.keys(socket.wires), function(wireId)
                     {
-                        var wire = vxRoot.wires[wireId];
+                        var wire = vaxRoot.wires[wireId];
                         wire.remove();
                     });
 
@@ -890,7 +942,7 @@
                     socket.caption.remove();
 
                     // delete from repository
-                    delete vxRoot.sockets[socket.id];
+                    delete vaxRoot.sockets[socket.id];
                 };
 
                 // remove all sockets
@@ -911,7 +963,7 @@
                 self.captionRect2.remove();
                 self.bgRect.remove();
 
-                delete vxRoot.nodes[self.id];
+                delete vaxRoot.nodes[self.id];
             };
 
             this.move = function(nx, ny)
@@ -1005,26 +1057,26 @@
         this.wire = function(socketId1, socketId2)
         {
 
-            if (vxRoot.sockets[socketId1].isConnectedToSocket(socketId2))
+            if (vaxRoot.sockets[socketId1].isConnectedToSocket(socketId2))
             {
                 return null;
             }
 
-            var newWireId = "VxWire-" + vx.genNextId();
-            var newWire = new VxWire(newWireId, socketId1, socketId2);
+            var newWireId = "VaxWire-" + vax.genNextId();
+            var newWire = new VaxWire(newWireId, socketId1, socketId2);
             this.wires[newWireId] = newWire;
 
             return newWire;
         };
 
-        function VxWire(id, socketId1, socketId2, config)
+        function VaxWire(id, socketId1, socketId2, config)
         {
             var self = this;
 
             this.id = id;
 
-            var socket1 = vxRoot.sockets[socketId1];
-            var socket2 = vxRoot.sockets[socketId2];
+            var socket1 = vaxRoot.sockets[socketId1];
+            var socket2 = vaxRoot.sockets[socketId2];
 
             if (socket1.isInput() && socket2.isOutput())
             {
@@ -1044,8 +1096,8 @@
 
             this.init = function()
             {
-                vxRoot.sockets[self.inputSocketId].wire(self.id);
-                vxRoot.sockets[self.outputSocketId].wire(self.id);
+                vaxRoot.sockets[self.inputSocketId].wire(self.id);
+                vaxRoot.sockets[self.outputSocketId].wire(self.id);
 
                 this.refresh();
             };
@@ -1067,10 +1119,10 @@
                     self.path.remove();
                 }
 
-                var s1 = vxRoot.sockets[self.inputSocketId];
-                var s2 = vxRoot.sockets[self.outputSocketId];
+                var s1 = vaxRoot.sockets[self.inputSocketId];
+                var s2 = vaxRoot.sockets[self.outputSocketId];
 
-                self.path = raphael.path(vx.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY()));
+                self.path = raphael.path(vax.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY()));
                 self.path.toBack();
                 self.path.attr({
                     'stroke': s2.config.color, // color of output socket
@@ -1082,7 +1134,7 @@
                 {
                     self.path.animate({"stroke-opacity":0}, 150, "linear", function()
                     {
-                        delete vxRoot.wires[self.id];
+                        delete vaxRoot.wires[self.id];
                         self.remove();
                     });
                 });
@@ -1090,8 +1142,8 @@
 
             this.remove = function()
             {
-                vxRoot.sockets[self.inputSocketId].unwire(self.id);
-                vxRoot.sockets[self.outputSocketId].unwire(self.id);
+                vaxRoot.sockets[self.inputSocketId].unwire(self.id);
+                vaxRoot.sockets[self.outputSocketId].unwire(self.id);
 
                 if (self.path)
                 {
@@ -1112,25 +1164,25 @@
 
         this.composeTrees = function()
         {
-            var composeTree = function composeTree(vxNode, parentsIds, out)
+            var composeTree = function composeTree(vaxNode, parentsIds, out)
             {
                 parentsIds = parentsIds || [];
 
-                if (_.some(parentsIds, function(pid) { return pid == vxNode.id;}))
+                if (_.some(parentsIds, function(pid) { return pid == vaxNode.id;}))
                 {
-                    throw new Error("Node " + vxNode.id + " is already present in graph parents: " + parentsIds.join(', '));
+                    throw new Error("Node " + vaxNode.id + " is already present in graph parents: " + parentsIds.join(', '));
                 }
 
-                var wiredInputSockets = _.filter(vxNode.inputSockets, function(socket) { return socket.isWired();});
+                var wiredInputSockets = _.filter(vaxNode.inputSockets, function(socket) { return socket.isWired();});
 
                 // collect attrs
                 var nodeAttrs = {};
-                _.each(vxNode.attributes, function(attr)
+                _.each(vaxNode.attributes, function(attr)
                 {
                     nodeAttrs[attr.config.name] = attr.value;
                 });
 
-                var newParentsIds = _.union(parentsIds, [vxNode.id]);
+                var newParentsIds = _.union(parentsIds, [vaxNode.id]);
 
                 // collect links
                 var links = {};
@@ -1141,22 +1193,22 @@
                         throw new Error("Input socket " + inputSocket.id + " is wired to more than 1 output");
                     }
 
-                    var wire = vxRoot.wires[wiresIdsArray[0]];
+                    var wire = vaxRoot.wires[wiresIdsArray[0]];
 
-                    var outputSocket = vxRoot.sockets[wire.outputSocketId];
+                    var outputSocket = vaxRoot.sockets[wire.outputSocketId];
 
 
-                    links[inputSocket.config.name] = composeTree(vxRoot.nodes[outputSocket.node.id], newParentsIds, outputSocket.config.name);
+                    links[inputSocket.config.name] = composeTree(vaxRoot.nodes[outputSocket.node.id], newParentsIds, outputSocket.config.name);
                 });
 
                 // return node data
                 return {
-                    id: vxNode.id,
-                    component: vxNode.config.component,
+                    id: vaxNode.id,
+                    component: vaxNode.config.component,
                     attrs: nodeAttrs,
                     links: links,
                     out: out,
-                    typeInstances: vxNode.config.typeInstances
+                    typeInstances: vaxNode.config.typeInstances
                 };
 
             };
@@ -1164,10 +1216,10 @@
             return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
         };
 
-        // init VX
+        // init VAX
         this.init();
-    } // function VX
+    } // function VAX
 
-    window.VX = VX;
+    window.VAX = VAX;
 }
 )(window, _, jQuery);

@@ -1,8 +1,14 @@
-html, body {
-    background: url("bg.jpg") #222;
+.vax-wrapper {
+    outline:2px solid black;
+    position: relative;
 }
 
-.vx-component-selector {
+    .vax-canvas {
+        position: absolute;
+        background: url("vax-grid.jpg") #222 repeat;
+    }
+
+.vax-component-selector {
     position: absolute;
     width: 220px;
     height: auto;
@@ -12,7 +18,7 @@ html, body {
     padding: 0px;
     box-shadow: #111 0 0 5px 2px;
 }
-    .vx-title {
+    .vax-title {
         color: gray;
         font-family: "Georgia";
         font-variant: small-caps;
@@ -23,7 +29,7 @@ html, body {
         padding: 5px;
     }
 
-    .vx-component {
+    .vax-component {
         color: white;
         margin: 2px 0;
         border-bottom: 1px solid #444;
@@ -33,13 +39,13 @@ html, body {
         font-weight: bold;
         cursor: pointer;
     }
-        .vx-component:hover {
+        .vax-component:hover {
             background: orange;
             color: black;
         }
 
 
-.vx-help {
+.vax-help {
     position: absolute;
     top: 30px;
     left: 30px;
@@ -50,7 +56,7 @@ html, body {
     font-size: 14pt;
 }
 
-.vx-type-picker {
+.vax-type-picker {
     position: absolute;
     background: #222;
     border-radius: 5px;
@@ -63,29 +69,29 @@ html, body {
 }
 
 
-    .vx-type-picker-title {
+    .vax-type-picker-title {
         color: white;
         font-weight: bold;
         font-size: 12pt;
     }
 
-    .vx-type-picker-select {
+    .vax-type-picker-select {
         width: 100px;
         text-align: right;
     }
 
-    .vx-type-picker-punct {
+    .vax-type-picker-punct {
         color: white;
         font-size: 18pt;
         vertical-align: bottom;
         font-weight: bold;
     }
 
-    .vx-type-picker-buttons {
+    .vax-type-picker-buttons {
         text-align: right;
     }
 
-    .vx-type-picker-signature {
+    .vax-type-picker-signature {
         font-family: Tahoma;
         color: orange;
         font-size: 12pt;

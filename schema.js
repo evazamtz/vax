@@ -1,4 +1,4 @@
-var vxSchema = {
+var vaxSchema = {
   "types": {
     "Numeric": {
       "color": "#fff"

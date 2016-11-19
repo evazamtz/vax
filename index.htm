@@ -2,17 +2,23 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <script src="underscore.js" type="text/javascript"></script>
-    <script src="raphael.js" type="text/javascript"></script>
-    <script src="jquery.js" type="text/javascript"></script>
-    <script src="chosen/chosen.jquery.js" type="text/javascript"></script>
-    <script src="vx.js" type="text/javascript"></script>
+    <script src="vendor/underscore.js" type="text/javascript"></script>
+    <script src="vendor/jquery.js" type="text/javascript"></script>
+    <script src="vendor/raphael.js" type="text/javascript"></script>
+    <script src="vendor/raphael-pan-zoom/raphael.pan-zoom.js" type="text/javascript"></script>
+    <script src="vendor/chosen/chosen.jquery.js" type="text/javascript"></script>
+    <script src="vax.js" type="text/javascript"></script>
     <script src="schema.js" type="text/javascript"></script>
-    <link rel="stylesheet" href="chosen/chosen.min.css" type="text/css"/>
+
+    <link rel="stylesheet" href="vendor/chosen/chosen.min.css" type="text/css"/>
+    <link rel="stylesheet" href="vendor/raphael-pan-zoom/raphael.pan-zoom.css" type="text/css"/>
     <link rel="stylesheet" href="styles.css" type="text/css"/>
 </head>
 <body>
 <style type="text/css">
+    body {
+        background: #333;
+    }
     #eval {
         position: absolute;
         top: 120px;
@@ -20,7 +26,9 @@
         z-index: 1000;
     }
 </style>
-<div class="vx-help">
+<div id="vax-test" style="width: 1024px; height: 768px;"></div>
+
+<div class="vax-help">
     <ul>
         <li>Press X to add a new node</li>
         <li>Double click a node caption or a wire to remove it</li>
@@ -28,19 +36,16 @@
 </div>
 
 
-
-
 <script type="text/javascript">
     $(function()
     {
-        var r = Raphael(0, 0, 2560, 1440);
-        window.myVX = new VX(r, {schema: vxSchema});
+        window.myVAX = new VAX('vax-test', {schema: vaxSchema});
 
 
         // eval
         $('#eval').click(function()
         {
-            var trees = myVX.composeTrees();
+            var trees = myVAX.composeTrees();
 
             if (trees.length !== 1)
             {
@@ -91,9 +96,9 @@
             alert(res);
         });
 
-        $('.vx-type-picker-select').chosen({});
+        $('.vax-type-picker-select').chosen({});
 
-        $(document).on('change', '.vx-type-picker-select', function()
+        $(document).on('change', '.vax-type-picker-select', function()
         {
             var $this = $(this);
             var val = $this.val();
@@ -106,7 +111,7 @@
             {
                 var l = parseInt($option.attr('data-type-params-length'));
 
-                $span.append($('<span class="vx-type-picker-punct"> [ </span>'));
+                $span.append($('<span class="vax-type-picker-punct"> [ </span>'));
 
                 for (var i = 0; i < l; ++i)
                 {
@@ -121,14 +126,14 @@
 
                     if (i < l - 1)
                     {
-                        $span.append($('<span class="vx-type-picker-punct"> , </span>'));
+                        $span.append($('<span class="vax-type-picker-punct"> , </span>'));
                     }
 
 
                     $clone.chosen({});
                 }
 
-                $span.append($('<span class="vx-type-picker-punct"> ] </span>'));
+                $span.append($('<span class="vax-type-picker-punct"> ] </span>'));
 
             }
             else
@@ -139,11 +144,11 @@
 
             var res = '';
             // seriazlie type
-            $('select,.vx-type-picker-punct', $('.vx-type-picker')).each(function()
+            $('select,.vax-type-picker-punct', $('.vax-type-picker')).each(function()
             {
                 var $el = $(this);
 
-                if ($el.hasClass('vx-type-picker-punct'))
+                if ($el.hasClass('vax-type-picker-punct'))
                 {
                     res = res + $el.text();
                 }
@@ -153,18 +158,18 @@
                 }
 
                 res = res.replace(' ', '');
-                $('.vx-type-picker-signature').text(res);
+                $('.vax-type-picker-signature').text(res);
             });
         });
     });
 </script>
 <button id="eval" type="button">Eval!</button>
 
-<div class="vx-type-picker">
-    <div class="vx-type-picker-title"><span class="vx-type-picker-signature">Any</span></div>
+<div class="vax-type-picker">
+    <div class="vax-type-picker-title"><span class="vax-type-picker-signature">Any</span></div>
     <hr/>
-    <div class="vx-type-picker-type-line">
-        <select class="vx-type-picker-select" data-type-n="1">
+    <div class="vax-type-picker-type-line">
+        <select class="vax-type-picker-select" data-type-n="1">
             <option value="Any" selected="selected">Any</option>
             <option value="Numeric">Numeric</option>
             <option value="Int">Int</option>
@@ -177,7 +182,7 @@
         <span data-type-n="1"><!-- sub type --></span>
     </div>
     <hr/>
-    <div class="vx-type-picker-buttons">
+    <div class="vax-type-picker-buttons">
         <button type="button">Ok</button><button type="button">Cancel</button>
     </div>
 </div>
