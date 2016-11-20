@@ -292,6 +292,51 @@
             return components;
         };
 
+        this.cloneNodeConfig = function(component)
+        {
+            var componentConfig = this.schema.components[component];
+
+            // shallow clone
+            var nodeConfig = _.clone(componentConfig);
+
+            // deep clone
+            nodeConfig.inputSockets  = [];
+            _.each(componentConfig.inputSockets, function(socket)
+            {
+                nodeConfig.inputSockets.push(_.clone(socket));
+            });
+
+            nodeConfig.outputSockets  = [];
+            _.each(componentConfig.outputSockets, function(socket)
+            {
+                nodeConfig.outputSockets.push(_.clone(socket));
+            });
+
+            nodeConfig.attributes  = [];
+            _.each(componentConfig.attributes, function(socket)
+            {
+                nodeConfig.attributes.push(_.clone(socket));
+            });
+
+            return nodeConfig;
+        };
+
+        this.fillTypeInstance = function(nodeConfig, typeAlias, actualType)
+        {
+            var self = this;
+
+            var subUpdate = function(subConf)
+            {
+                subConf.type = subConf.type.replace('@' + typeAlias, actualType);
+                subConf.parsedType = vax.parseType(subConf.type);
+                subConf.color = self.getColorOfParsedType(subConf.parsedType);
+            };
+
+            _.each(nodeConfig.inputSockets,  subUpdate);
+            _.each(nodeConfig.outputSockets, subUpdate);
+            _.each(nodeConfig.attributes,    subUpdate);
+        };
+
         this.getColorOfParsedType = function(parsedType)
         {
             var rootTypeName = _.isObject(parsedType) ? parsedType.name : parsedType;
@@ -557,39 +602,18 @@
 
             $wrapper.on('click', 'div', function()
             {
+                var nodeX = self.mouseX;
+                var nodeY = self.mouseY;
 
                 var $this = $(this);
 
                 var component = $this.attr('data-vax-component');
 
-                var componentConfig = self.schema.components[component];
-
-                // shallow clone
-                var nodeConfig = _.clone(componentConfig);
-
-                // deep clone
-                nodeConfig.inputSockets  = [];
-                _.each(componentConfig.inputSockets, function(socket)
-                {
-                    nodeConfig.inputSockets.push(_.clone(socket));
-                });
-
-                nodeConfig.outputSockets  = [];
-                _.each(componentConfig.outputSockets, function(socket)
-                {
-                    nodeConfig.outputSockets.push(_.clone(socket));
-                });
-
-                nodeConfig.attributes  = [];
-                _.each(componentConfig.attributes, function(socket)
-                {
-                    nodeConfig.attributes.push(_.clone(socket));
-                });
-
+                var nodeConfig = self.cloneNodeConfig(component);
 
                 // update mouse pos
-                nodeConfig.x = self.mouseX;
-                nodeConfig.y = self.mouseY;
+                nodeConfig.x = nodeX;
+                nodeConfig.y = nodeY;
 
                 if (nodeConfig.typeParams && nodeConfig.typeParams.length > 0)
                 {
@@ -599,17 +623,7 @@
                         nodeConfig.typeInstances = {};
                         nodeConfig.typeInstances[paramName] = prompt('Input type name for parameter ' + paramName, 'Any');
 
-
-                        var subUpdate = function(subConf)
-                        {
-                            subConf.type = subConf.type.replace('@' + paramName, nodeConfig.typeInstances[paramName]);
-                            subConf.parsedType = vax.parseType(subConf.type);
-                            subConf.color = vaxRoot.getColorOfParsedType(subConf.parsedType);
-                        };
-
-                        _.each(nodeConfig.inputSockets,  subUpdate);
-                        _.each(nodeConfig.outputSockets, subUpdate);
-                        _.each(nodeConfig.attributes,    subUpdate);
+                        self.fillTypeInstance(nodeConfig, paramName, nodeConfig.typeInstances[paramName]);
 
                     }
                     else
@@ -621,8 +635,6 @@
                 vaxRoot.createNode(nodeConfig);
 
                 $wrapper.remove();
-
-                vaxRoot.refreshScrollSliders();
             });
 
 
@@ -638,7 +650,10 @@
         this.createNode = function(config)
         {
             var newId = "VaxNode-" + vax.genNextId();
-            this.nodes[newId] = new VaxNode(newId, config);
+            var newNode = new VaxNode(newId, config);
+            this.nodes[newId] = newNode;
+
+            return newNode;
         };
 
         function VaxSocket(id, node, nodeIndex, config, kind)
@@ -826,6 +841,11 @@
                         vaxRoot.wires[k].refresh();
                     }
                 }
+            };
+
+            this.getNode = function()
+            {
+                return this.node;
             };
 
             this.getCX = function() {
@@ -1021,6 +1041,11 @@
                 return self.id;
             };
 
+            this.getCompactId = function()
+            {
+                return self.id.replace('VaxNode-', '');
+            };
+
             this.getConfig = function()
             {
                 return self.config;
@@ -1095,6 +1120,8 @@
                     vaxRoot.sockets[socketId] = outputSocket;
                 }
 
+                // refresh scrollbars sliders
+                vaxRoot.refreshScrollSliders();
 
                 // moveContainer drag
                 self.moveContainer.drag(
@@ -1136,6 +1163,33 @@
                     right:  this.moveContainer.attr('x') + this.moveContainer.attr('width'),
                     bottom: this.moveContainer.attr('y') + this.moveContainer.attr('height'),
                 };
+            };
+
+            this.getOutputSocketIdByName = function(socketName)
+            {
+                return this._getSocketIdByName(this.outputSockets, socketName);
+            };
+
+            this.getInputSocketIdByName = function(socketName)
+            {
+                return this._getSocketIdByName(this.inputSockets, socketName);
+            };
+
+            this._getSocketIdByName = function(sockets, socketName)
+            {
+                for (var k in sockets)
+                {
+                    if (sockets.hasOwnProperty(k))
+                    {
+                        var is = sockets[k];
+                        if (is.config.name == socketName)
+                        {
+                            return is.id;
+                        }
+                    }
+                }
+
+                return null;
             };
 
             // удаление
@@ -1357,6 +1411,7 @@
             {
                 vaxRoot.sockets[self.inputSocketId].unwire(self.id);
                 vaxRoot.sockets[self.outputSocketId].unwire(self.id);
+                delete vaxRoot.wires[self.id];
 
                 if (self.path)
                 {
@@ -1427,6 +1482,133 @@
             };
 
             return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
+        };
+
+        this.saveBlueprint = function()
+        {
+            var self = this;
+
+            // --- nodes
+            var nodes = _.map(self.nodes, function(node) {
+                var nodePickle = {
+                    id: node.getCompactId(),
+                    c: node.config.component,
+                    x: node.getX(),
+                    y: node.getY()
+                };
+
+                if (!_.isEmpty(node.config.typeInstances))
+                {
+                    nodePickle.t = node.config.typeInstances;
+                }
+
+                if (!_.isEmpty(node.attributes))
+                {
+                    var pickledAttrs = {};
+                    _.each(node.attributes, function(attr, k)
+                    {
+                        pickledAttrs[attr.config.name] = attr.value;
+                    });
+
+                    nodePickle.a = pickledAttrs;
+                }
+
+                return nodePickle;
+            });
+
+            // --- wires
+            var wires = _.map(self.wires, function(wire)
+            {
+                var input  = self.sockets[wire.getInputSocketId()];
+                var output = self.sockets[wire.getOutputSocketId()];
+
+                return [output.getNode().getCompactId(), output.config.name, input.getNode().getCompactId(), input.config.name];
+            });
+
+            // gather everything in a blueprint
+            return {
+                version: "0.1",
+                nodes: nodes,
+                wires: wires
+            };
+        };
+
+        this.serializeBlueprint = function()
+        {
+            return JSON.stringify(this.saveBlueprint());
+        };
+
+        this.clearBlueprint = function()
+        {
+            _.each(this.nodes, function(node)
+            {
+                node.remove();
+            });
+        };
+
+        this.loadBlueprint = function(blueprint)
+        {
+            var self = this;
+
+            // clear itself
+            self.clearBlueprint();
+
+            // pickledId -> realId nodes mapping
+            var nodesIdsMap = {};
+
+            if (blueprint.nodes)
+            {
+                _.each(blueprint.nodes, function(nodePickle)
+                {
+                    // TODO: handle errors
+                    var nodeConfig = self.cloneNodeConfig(nodePickle.c);
+
+                    // fill in type instances
+                    if (nodePickle.t)
+                    {
+                        _.each(nodePickle.t, function(actualType, typeAlias)
+                        {
+                            self.fillTypeInstance(nodeConfig, typeAlias, actualType);
+                        });
+                    }
+
+                    // set attributes
+                    if (nodePickle.a)
+                    {
+                        _.each(nodePickle.a, function(val, name)
+                        {
+                            nodeConfig.attributes[name].value = val;
+                        });
+                    }
+
+                    // set position
+                    nodeConfig.x = nodePickle.x || 0;
+                    nodeConfig.y = nodePickle.y || 0;
+
+                    // create actualNode
+                    var node = vaxRoot.createNode(nodeConfig);
+
+                    // map id for wiring
+                    nodesIdsMap[nodePickle.id] = node.getId();
+                });
+            }
+
+            // wire 'em
+            if (blueprint.wires)
+            {
+                _.each(blueprint.wires, function(wirePickle)
+                {
+                    var outputNodeId = nodesIdsMap[wirePickle[0]];
+                    var outputSocketName = wirePickle[1];
+                    var outputSocketId = self.nodes[outputNodeId].getOutputSocketIdByName(outputSocketName);
+
+                    var inputNodeId = nodesIdsMap[wirePickle[2]];
+                    var inputSocketName = wirePickle[3];
+                    var inputSocketId = self.nodes[inputNodeId].getInputSocketIdByName(inputSocketName);
+
+                    self.wire(outputSocketId, inputSocketId);
+                });
+            }
         };
 
         // init VAX

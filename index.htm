@@ -41,6 +41,19 @@
     {
         window.myVAX = new VAX('vax-test', {schema: vaxSchema});
 
+        window.bp = {
+            version: "0.1",
+            nodes: [
+                {id: "1", c: "Add", x: 200, y: 200},
+                {id: "2", c: "Add", x: 400, y: 400}
+            ],
+            wires: [
+                ["1", "O", "2", "A"],
+                ["1", "O", "2", "B"]
+            ]
+
+        };
+
 
         // eval
         $('#eval').click(function()
