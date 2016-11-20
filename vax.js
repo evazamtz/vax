@@ -339,6 +339,9 @@
             });
 
             this.initScrollbarsHandlers();
+
+            // draw scrollbars
+            this.refreshScrollSliders();
         };
 
 
@@ -346,9 +349,80 @@
         {
             var self = this;
 
-            $('.vax-horiz-sb-slider', this.$wrapper).mousedown(function(e)
-            {
+            var $horizSlider = $('.vax-horiz-sb-slider', this.$wrapper);
+            var $vertSlider  = $('.vax-vert-sb-slider',  this.$wrapper);
 
+            $horizSlider.mousedown(function(e)
+            {
+                var mouseX = e.originalEvent.pageX;
+
+                self.scollbarsDragging.horizontal.isDragging = true;
+                self.scollbarsDragging.horizontal.delta = parseInt(mouseX - $horizSlider.offset().left);
+
+                $horizSlider.addClass('vax-sb-slider-dragging');
+            });
+
+            $vertSlider.mousedown(function(e)
+            {
+                var mouseY = e.originalEvent.pageY;
+
+                self.scollbarsDragging.vertical.isDragging = true;
+                self.scollbarsDragging.vertical.delta = parseInt(mouseY - $vertSlider.offset().top);
+
+                $vertSlider.addClass('vax-sb-slider-dragging');
+            });
+
+            $(document).mousemove(function(e)
+            {
+                if (self.scollbarsDragging.horizontal.isDragging)
+                {
+                    var mouseX = e.pageX;
+
+                    var left = mouseX - self.scollbarsDragging.horizontal.delta;
+
+                    left = Math.max(0, left);
+                    left = Math.min(left, self.canvasWidth - self.scrollbarSpinnerSize - $horizSlider.width());
+
+                    $horizSlider.css({'left': parseInt(left)});
+
+                    // now we panTo somewhere
+                    var pos = left / (self.canvasWidth - 2 * self.scrollbarSpinnerSize);
+                    var maxViewBox = self.getMaxViewBox();
+
+                    var width = maxViewBox.right - maxViewBox.left;
+                    var newLeft = maxViewBox.left + parseInt(width * pos);
+
+                    self.panTo(newLeft, self.viewBox.top);
+                }
+                else if (self.scollbarsDragging.vertical.isDragging)
+                {
+                    var mouseY = e.pageY;
+
+                    var top = mouseY - self.scollbarsDragging.vertical.delta;
+
+                    top = Math.max(0, top);
+                    top = Math.min(top, self.canvasHeight - self.scrollbarSpinnerSize - $vertSlider.height());
+
+                    $vertSlider.css({'top': parseInt(top)});
+
+                    // now we panTo somewhere
+                    var pos = top / (self.canvasHeight - 2 * self.scrollbarSpinnerSize);
+                    var maxViewBox = self.getMaxViewBox();
+
+                    var height = maxViewBox.bottom - maxViewBox.top;
+                    var newTop = maxViewBox.top + parseInt(height * pos);
+
+                    self.panTo(self.viewBox.left, newTop);
+                }
+            });
+
+            $(document).mouseup(function(e)
+            {
+                self.scollbarsDragging.horizontal.isDragging = false;
+                self.scollbarsDragging.vertical.isDragging   = false;
+
+                $horizSlider.removeClass('vax-sb-slider-dragging');
+                $vertSlider.removeClass('vax-sb-slider-dragging');
             });
         };
 
@@ -449,7 +523,7 @@
             this.raphael.setViewBox(left, top, this.canvasWidth, this.canvasHeight, false);
 
             // canvas bg position
-            this.$canvas.css({'backgroundPosition': left + 'px ' + ' ' + top + 'px'});
+            this.$canvas.css({'backgroundPosition': '' + (-left) + 'px ' + ' ' + (-top) + 'px'});
 
             // scrollSliders if they're driven by scrolling ?? should be a flag
             this.refreshScrollSliders();
@@ -547,6 +621,8 @@
                 vaxRoot.createNode(nodeConfig);
 
                 $wrapper.remove();
+
+                vaxRoot.refreshScrollSliders();
             });
 
 
@@ -1027,6 +1103,7 @@
                         self.move(this.dragX + dx, this.dragY + dy)
 
                     },
+
                     function (x, y) {
                         this.dragX = this.attr('x');
                         this.dragY = this.attr('y');
@@ -1035,6 +1112,8 @@
                     function (evt) {
                         this.dragX = null;
                         this.dragY = null;
+
+                        vaxRoot.refreshScrollSliders();
                     }
                 );
 

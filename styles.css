@@ -47,13 +47,11 @@
         .vax-horiz-sb-slider {
             left: 20px;
             height: 20px;
-            cursor: e-resize;
         }
 
         .vax-vert-sb-slider {
             width: 20px;
             top: 20px;
-            cursor: n-resize;
         }
 
         .vax-sb-spinner {
@@ -63,10 +61,9 @@
             background: #999;
             color: #222;
             text-align: center;
-            cursor: pointer;
         }
 
-            .vax-sb-spinner:hover {
+            .vax-sb-spinner:hover, .vax-sb-slider-dragging {
                 background: #777;
                 color: #000;
             }
