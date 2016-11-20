@@ -61,6 +61,7 @@
 
         var vaxRoot = this;
 
+        // create wrapper and canvas elements
         this.domElementId = domElementId;
         var $wrapper = this.$wrapper = $('#' + domElementId);
         $wrapper.addClass('vax-wrapper');
@@ -68,15 +69,14 @@
         this.wrapperWidth = $wrapper.width();
         this.wrapperHeight = $wrapper.height();
 
-        var scrollbarSize = 20;
-        var toolbarWidth = 60;
+        var scrollbarSpinnerSize = this.scrollbarSpinnerSize = 20;
 
-        this.canvasWidth = this.wrapperWidth - toolbarWidth - scrollbarSize;
-        this.canvasHeight = this.wrapperHeight - scrollbarSize;
+        this.canvasWidth = this.wrapperWidth - scrollbarSpinnerSize;
+        this.canvasHeight = this.wrapperHeight - scrollbarSpinnerSize;
 
         this.canvasDomElementId = domElementId + '-vax-canvas-' + vax.genNextId();
         var $canvas = this.$canvas = $('<div id="' + this.canvasDomElementId + '" class="vax-canvas"/>');
-        $canvas.css({'width': this.canvasWidth, 'height': this.canvasHeight, 'left': toolbarWidth, 'top': 0});
+        $canvas.css({'width': this.canvasWidth, 'height': this.canvasHeight, 'left': 0, 'top': 0});
 
         $wrapper.append(this.$canvas);
 
@@ -85,10 +85,26 @@
         // raphael view box offset (we use only pan)
         this.viewBoxOffset = {x:0, y:0};
 
-        // prepare toolbar
+        // create scrollbars
+        var $horizScrollbar = this.$horizScrollbar =
+            $('<div class="vax-scrollbar vax-horiz-scrollbar">' +
+                '<div class="vax-sb-spinner vax-hsb-left-spinner">&larr;</div>' +
+                '<div class="vax-sb-slider vax-horiz-sb-slider"></div>' +
+                '<div class="vax-sb-spinner vax-hsb-right-spinner">&rarr;</div>' +
+              '</div>'
+            );
+        $wrapper.append($horizScrollbar);
+
+        var $vertScrollbar = this.$vertScrollbar =
+            $('<div class="vax-scrollbar vax-vert-scrollbar">' +
+                '<div class="vax-sb-spinner vax-vsb-top-spinner">&uarr;</div>' +
+                '<div class="vax-sb-slider vax-vert-sb-slider"></div>' +
+                '<div class="vax-sb-spinner vax-vsb-bottom-spinner">&darr;</div>' +
+                '</div>'
+            );
+        $wrapper.append($vertScrollbar);
 
 
-        // prepare scrollbars
 
         var raphael = this.raphael = new Raphael(this.canvasDomElementId, this.canvasWidth, this.canvasHeight);
 
@@ -312,13 +328,45 @@
         this.getBoundingBox = function()
         {
             var nodesBoxes = _.map(this.nodes, function(node) { return node.getBoundingBox(); });
+
             return {
                 left:   _.min( _.map(nodesBoxes, function(box) { return box.left }) ),
                 top:    _.min( _.map(nodesBoxes, function(box) { return box.top  }) ),
 
                 right:  _.max( _.map(nodesBoxes, function(box) { return box.right }) ),
-                bottom: _.max( _.map(nodesBoxes, function(box) { return box.bottom }) ),
+                bottom: _.max( _.map(nodesBoxes, function(box) { return box.bottom }) )
             };
+        };
+
+        this.getScrollbarsScales = function()
+        {
+            var boundingBox = this.getBoundingBox();
+
+            var h = 1;
+            if (isFinite(boundingBox.left))
+            {
+                h = this.canvasWidth / (Math.abs(boundingBox.right - boundingBox.left) * 1.25);
+                h = Math.min(1, h);
+            }
+
+            var v = 1;
+            if (isFinite(boundingBox.top))
+            {
+                v = this.canvasHeight / (Math.abs(boundingBox.bottom - boundingBox.top) * 1.25);
+                v = Math.min(1, v);
+            }
+
+            return {
+                horizontal: h,
+                vertical: v
+            };
+        };
+
+        this.refreshScrollSliders = function()
+        {
+            var scales = this.getScrollbarsScales();
+            $('.vax-horiz-sb-slider', this.$wrapper).css({'width': (this.canvasWidth - 2 * this.scrollbarSpinnerSize) * scales.horizontal});
+            $('.vax-vert-sb-slider', this.$wrapper).css({'height': (this.canvasHeight - 2 * this.scrollbarSpinnerSize) * scales.vertical});
         };
 
         this.showSelector = function()

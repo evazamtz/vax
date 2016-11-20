@@ -8,6 +8,81 @@
         background: url("vax-grid.jpg") #222 repeat;
     }
 
+    .vax-scrollbar {
+        position: absolute;
+        background: #333;
+    }
+
+    .vax-horiz-scrollbar {
+        height: 20px;
+        bottom: 0px;
+        left: 0;
+        right: 20px;
+    }
+
+    .vax-vert-scrollbar {
+        width: 20px;
+        top: 0;
+        right: 0px;
+        bottom: 20px;
+    }
+
+        .vax-sb-slider {
+            position: absolute;
+            background: #666;
+        }
+
+            .vax-sb-slider:hover {
+                background: #444;
+            }
+
+        .vax-horiz-sb-slider {
+            left: 20px;
+            height: 20px;
+            cursor: e-resize;
+        }
+
+        .vax-vert-sb-slider {
+            width: 20px;
+            top: 20px;
+            cursor: n-resize;
+        }
+
+        .vax-sb-spinner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #999;
+            color: #222;
+            text-align: center;
+            cursor: pointer;
+        }
+
+            .vax-sb-spinner:hover {
+                background: #777;
+                color: #000;
+            }
+
+        .vax-hsb-left-spinner {
+            top: 0;
+            left: 0;
+        }
+
+        .vax-hsb-right-spinner {
+            top: 0;
+            right: 0;
+        }
+
+        .vax-vsb-top-spinner {
+            top: 0;
+            left: 0;
+        }
+
+        .vax-vsb-bottom-spinner {
+            bottom: 0;
+            left: 0;
+        }
+
 .vax-component-selector {
     position: absolute;
     width: 220px;
