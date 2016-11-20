@@ -64,7 +64,7 @@
         // create wrapper and canvas elements
         this.domElementId = domElementId;
         var $wrapper = this.$wrapper = $('#' + domElementId);
-        $wrapper.addClass('vax-wrapper');
+        $wrapper.addClass('vax-wrapper vax-text-unselectable');
 
         this.wrapperWidth = $wrapper.width();
         this.wrapperHeight = $wrapper.height();
@@ -82,8 +82,8 @@
 
         this.canvasOffset = this.$canvas.offset();
 
-        // raphael view box offset (we use only pan)
-        this.viewBoxOffset = {x:0, y:0};
+        // raphael view box (for now we only use pan)
+        this.viewBox = {left:0, top:0};
 
         // create scrollbars
         var $horizScrollbar = this.$horizScrollbar =
@@ -104,8 +104,20 @@
             );
         $wrapper.append($vertScrollbar);
 
+        // dragging helper object
+        this.scollbarsDragging = {
+            horizontal: {
+                isDragging: false,
+                delta: 0
+            },
 
+            vertical: {
+                isDragging: false,
+                delta: 0
+            }
+        };
 
+        // creating the actual Raphael object
         var raphael = this.raphael = new Raphael(this.canvasDomElementId, this.canvasWidth, this.canvasHeight);
 
         this.config = _.defaults(config, {
@@ -311,9 +323,11 @@
             var self = this;
 
             $(document).mousemove(function(e) {
-                var offset = self.$canvas.offset();
-                self.mouseX = e.pageX - offset.left;
-                self.mouseY = e.pageY - offset.top;
+                var canvasOffset = self.$canvas.offset();
+                var viewBox      = self.viewBox;
+
+                self.mouseX = e.pageX - canvasOffset.left + viewBox.left;
+                self.mouseY = e.pageY - canvasOffset.top  + viewBox.top;
             }).mouseover(); // call the handler immediately
 
 
@@ -322,6 +336,19 @@
                 {
                     self.showSelector();
                 }
+            });
+
+            this.initScrollbarsHandlers();
+        };
+
+
+        this.initScrollbarsHandlers = function()
+        {
+            var self = this;
+
+            $('.vax-horiz-sb-slider', this.$wrapper).mousedown(function(e)
+            {
+
             });
         };
 
@@ -338,35 +365,94 @@
             };
         };
 
+        this.getMaxViewBox = function()
+        {
+            var bb = this.getBoundingBox();
+
+            var freeOffset = 200; // TODO: configure of constant (or half of view size)s
+
+            return {
+                left: Math.min(this.viewBox.left, bb.left - freeOffset),
+                top:  Math.min(this.viewBox.top, bb.top - freeOffset),
+                right:  Math.max(this.viewBox.left + this.canvasWidth, bb.right + freeOffset),
+                bottom: Math.max(this.viewBox.top + this.canvasHeight, bb.bottom + freeOffset)
+            };
+        };
+
         this.getScrollbarsScales = function()
         {
-            var boundingBox = this.getBoundingBox();
+            var boundingBox = this.getMaxViewBox();
+            var viewBox = this.viewBox;
 
-            var h = 1;
+            var hs = 1;
+            var ho = 0;
             if (isFinite(boundingBox.left))
             {
-                h = this.canvasWidth / (Math.abs(boundingBox.right - boundingBox.left) * 1.25);
-                h = Math.min(1, h);
+                hs = Math.min(1, this.canvasWidth / (Math.abs(boundingBox.right - boundingBox.left)));
+                ho = Math.abs(boundingBox.left - viewBox.left) / Math.abs(boundingBox.right - boundingBox.left);
             }
 
-            var v = 1;
+            var vs = 1;
+            var vo = 0;
             if (isFinite(boundingBox.top))
             {
-                v = this.canvasHeight / (Math.abs(boundingBox.bottom - boundingBox.top) * 1.25);
-                v = Math.min(1, v);
+                vs = Math.min(1, this.canvasHeight / (Math.abs(boundingBox.bottom - boundingBox.top)));
+                vo = Math.abs(boundingBox.top - viewBox.top) / Math.abs(boundingBox.bottom - boundingBox.top);
+            }
+
+            if (hs == 1)
+            {
+                ho = 0;
+            }
+
+            if (vs == 1)
+            {
+                vo = 0;
             }
 
             return {
-                horizontal: h,
-                vertical: v
+                horizontalScale: hs,
+                horizontalOffset: ho,
+                verticalScale: vs,
+                verticalOffset: vo
             };
         };
 
         this.refreshScrollSliders = function()
         {
             var scales = this.getScrollbarsScales();
-            $('.vax-horiz-sb-slider', this.$wrapper).css({'width': (this.canvasWidth - 2 * this.scrollbarSpinnerSize) * scales.horizontal});
-            $('.vax-vert-sb-slider', this.$wrapper).css({'height': (this.canvasHeight - 2 * this.scrollbarSpinnerSize) * scales.vertical});
+
+            // horizontal
+            var horizSpace = this.canvasWidth - 2 * this.scrollbarSpinnerSize;
+            $('.vax-horiz-sb-slider', this.$wrapper).css({
+                'width':  horizSpace * scales.horizontalScale,
+                'left': this.scrollbarSpinnerSize + horizSpace * scales.horizontalOffset
+            });
+
+            // vertical
+            var vertSpace = this.canvasHeight - 2 * this.scrollbarSpinnerSize;
+            $('.vax-vert-sb-slider', this.$wrapper).css({
+                'height': vertSpace * scales.verticalScale,
+                'top': this.scrollbarSpinnerSize + vertSpace * scales.verticalOffset,
+            });
+        };
+
+        this.panTo = function(left, top)
+        {
+            var vb = this.getMaxViewBox();
+
+            left = Math.min(Math.max(left, vb.left), vb.right - this.canvasWidth);
+            top  = Math.min(Math.max(top, vb.top), vb.bottom - this.canvasHeight);
+
+            // view box
+            this.viewBox = {left: left, top: top};
+            this.raphael.setViewBox(left, top, this.canvasWidth, this.canvasHeight, false);
+
+            // canvas bg position
+            this.$canvas.css({'backgroundPosition': left + 'px ' + ' ' + top + 'px'});
+
+            // scrollSliders if they're driven by scrolling ?? should be a flag
+            this.refreshScrollSliders();
         };
 
         this.showSelector = function()
@@ -565,7 +651,7 @@
                         var cx = self.circle.attr("cx");
                         var cy = self.circle.attr("cy");
 
-                        this.drawWire = raphael.path(vax.buildWirePath(cx, cy, nx - vaxRoot.canvasOffset.left, ny - vaxRoot.canvasOffset.top));
+                        this.drawWire = raphael.path(vax.buildWirePath(cx, cy, nx - vaxRoot.canvasOffset.left + vaxRoot.viewBox.left, ny - vaxRoot.canvasOffset.top + vaxRoot.viewBox.top));
                         this.drawWire.toBack();
                         this.drawWire.attr({
                             'stroke': self.config.color,
