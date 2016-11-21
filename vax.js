@@ -53,15 +53,19 @@
             }
         },
 
+        template: function(tpl, data)
+        {
+            throw new Error("not implemented yet");
+        },
+
     }); // vax.extend
 
     // VAX class
     function VAX(domElementId, config)
     {
-
         var vaxRoot = this;
 
-        // create wrapper and canvas elements
+        // create wrapper
         this.domElementId = domElementId;
         var $wrapper = this.$wrapper = $('#' + domElementId);
         $wrapper.addClass('vax-wrapper vax-text-unselectable');
@@ -71,6 +75,7 @@
 
         var scrollbarSpinnerSize = this.scrollbarSpinnerSize = 20;
 
+        // canvas element
         this.canvasWidth = this.wrapperWidth - scrollbarSpinnerSize;
         this.canvasHeight = this.wrapperHeight - scrollbarSpinnerSize;
 
@@ -81,9 +86,6 @@
         $wrapper.append(this.$canvas);
 
         this.canvasOffset = this.$canvas.offset();
-
-        // raphael view box (for now we only use pan)
-        this.viewBox = {left:0, top:0};
 
         // create scrollbars
         var $horizScrollbar = this.$horizScrollbar =
@@ -117,8 +119,14 @@
             }
         };
 
+        // raphael view box (for now we only use pan)
+        this.viewBox = {left:0, top:0};
+
         // creating the actual Raphael object
         var raphael = this.raphael = new Raphael(this.canvasDomElementId, this.canvasWidth, this.canvasHeight);
+
+        // create ui
+        this.ui = new VaxUI(this);
 
         this.config = _.defaults(config, {
             schema: {
@@ -387,6 +395,9 @@
 
             // draw scrollbars
             this.refreshScrollSliders();
+
+            // init ui
+            this.ui.init();
         };
 
 
@@ -915,6 +926,76 @@
                 {
                     self.circle.attr({fill:'#000'});
                 }
+            };
+
+            this.init();
+        };
+
+        function VaxUI(vax)
+        {
+            var self = this;
+
+            if (!(vax instanceof VAX))
+            {
+                throw new Error("Instance of VAX was expected");
+            }
+
+            self.vaxRoot = vax;
+
+            this.init = function()
+            {
+                this.$overlay = $('<button class="vax-overlay"/>');
+                vaxRoot.$wrapper.append(this.$overlay);
+            };
+
+            this.showOverlay = function()
+            {
+                this.$overlay.addClass('vax-overlay-visible');
+            };
+
+            this.hideOverlay = function()
+            {
+                this.$overlay.removeClass('vax-overlay-visible');
+            };
+
+            this.createDialog = function(options)
+            {
+                var $dlg = $('<div class="vax-dlg"/>');
+                
+                if (options.header)
+                {
+                    var $header = $('<div class="vax-dlg-header"/>');
+
+                    var headerContents = options.header;
+                    (headerContents instanceof jQuery) ? $header.append(headerContents) : $header.html(headerContents);
+                    
+                    $dlg.append($header);
+                }
+                
+                if (options.body)
+                {
+                    var $body = $('<div class="vax-dlg-body"/>');
+
+                    var bodyContents = options.body;
+                    (bodyContents instanceof jQuery) ? $body.append(bodyContents) : $body.html(bodyContents);
+
+                    $dlg.append($body);
+                }
+
+                if (options.buttons)
+                {
+                    var $footer = $('<div class="vax-dlg-footer"/>');
+
+                    _.each(options.buttons, function(title, action)
+                    {
+                        var $btn = $('<button type="button"/>').addClass('vax-dlg-btn').attr('data-action', action).text(title);
+                        $footer.append($btn);
+                    });
+
+                    $dlg.append($footer);
+                }
+
+                return $dlg;
             };
 
             this.init();

@@ -1,3 +1,4 @@
+/* ===BIG STUFF */
 .vax-text-unselectable {
     -moz-user-select: -moz-none;
     -khtml-user-select: none;
@@ -16,6 +17,23 @@
         background: url("vax-grid.jpg") #222 repeat;
     }
 
+    .vax-overlay {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        border: none;
+        opacity: .5;
+    }
+
+        .vax-overlay-visible {
+            display: block;
+        }
+
+    /* ===SCROLLBARS */
     .vax-scrollbar {
         position: absolute;
         background: #333;
@@ -88,92 +106,152 @@
             left: 0;
         }
 
-.vax-component-selector {
-    position: absolute;
-    width: 220px;
-    height: auto;
-    background: #111;
-    border:2px solid black;
-    border-radius: 2px;
-    padding: 0px;
-    box-shadow: #111 0 0 5px 2px;
-}
-    .vax-title {
-        color: gray;
+    /* ===DIALOGS */
+    .vax-dlg {
+        background: #111;
+        border:2px solid #888;
+        border-radius: 5px;
+        box-shadow: #111 0 0 5px 2px;
+
+        position: absolute;
+        top: 120px;
+        left: 120px;
+    }
+
+        .vax-dlg-header {
+            padding: 6px;
+            color: #ddd;
+            font-weight: bold;
+            font-family: "Georgia", "Times New Roman", serif;
+            font-variant: small-caps;
+            border-bottom: 1px solid #888;
+            background: #222;
+        }
+
+        .vax-dlg-body {
+            padding: 10px 6px;
+            color: white;
+        }
+
+        .vax-dlg-footer {
+            border-top: 1px solid #888;
+            background: #333;
+            padding: 6px;
+            text-align: right;
+        }
+
+        .vax-dlg-btn {
+            background: #333;
+            color: #aaa;
+            border: 1px solid #111;
+
+            border-radius: 2px;
+            padding: 2px 6px;
+            display: inline-block;
+            margin-left: 3px;
+        }
+
+            .vax-dlg-btn:hover {
+                background: #111;
+                color: #ccc;
+                border: 1px solid #555;
+
+            }
+
+            .vax-dlg-btn:active {
+                background: #999;
+                color: #111;
+                border: 1px solid silver;
+            }
+
+    /* ===COMPONENT SELECTOR */
+    .vax-component-selector {
+        position: absolute;
+        width: 220px;
+        height: auto;
+        background: #111;
+        border:2px solid black;
+        border-radius: 2px;
+        padding: 0px;
+        box-shadow: #111 0 0 5px 2px;
+    }
+        .vax-title {
+            color: gray;
+            font-family: "Georgia";
+            font-variant: small-caps;
+            font-weight: bold;
+            font-size: 12pt;
+            margin: 2px 0;
+            border-bottom: 3px solid #444;
+            padding: 5px;
+        }
+
+        .vax-component {
+            color: white;
+            margin: 2px 0;
+            border-bottom: 1px solid #444;
+            padding: 5px;
+            font-family: "Tahoma";
+            font-size: 10pt;
+            font-weight: bold;
+            cursor: pointer;
+        }
+            .vax-component:hover {
+                background: orange;
+                color: black;
+            }
+
+
+    /** ===TYPE PICKER */
+    .vax-help {
+        position: absolute;
+        top: 30px;
+        left: 30px;
+        color: white;
         font-family: "Georgia";
         font-variant: small-caps;
         font-weight: bold;
-        font-size: 12pt;
-        margin: 2px 0;
-        border-bottom: 3px solid #444;
-        padding: 5px;
+        font-size: 14pt;
     }
 
-    .vax-component {
-        color: white;
-        margin: 2px 0;
-        border-bottom: 1px solid #444;
-        padding: 5px;
-        font-family: "Tahoma";
-        font-size: 10pt;
-        font-weight: bold;
-        cursor: pointer;
+    .vax-type-picker {
+        position: absolute;
+        background: #222;
+        border-radius: 5px;
+        width: auto;
+        padding: 10px;
+        z-index: 100;
+        box-shadow: #000 0 0 2px 1px;
+        left: 600px;
+
     }
-        .vax-component:hover {
-            background: orange;
-            color: black;
+
+
+        .vax-type-picker-title {
+            color: white;
+            font-weight: bold;
+            font-size: 12pt;
         }
 
+        .vax-type-picker-select {
+            width: 100px;
+            text-align: right;
+        }
 
-.vax-help {
-    position: absolute;
-    top: 30px;
-    left: 30px;
-    color: white;
-    font-family: "Georgia";
-    font-variant: small-caps;
-    font-weight: bold;
-    font-size: 14pt;
-}
+        .vax-type-picker-punct {
+            color: white;
+            font-size: 18pt;
+            vertical-align: bottom;
+            font-weight: bold;
+        }
 
-.vax-type-picker {
-    position: absolute;
-    background: #222;
-    border-radius: 5px;
-    width: auto;
-    padding: 10px;
-    z-index: 100;
-    box-shadow: #000 0 0 2px 1px;
-    left: 600px;
+        .vax-type-picker-buttons {
+            text-align: right;
+        }
 
-}
-
-
-    .vax-type-picker-title {
-        color: white;
-        font-weight: bold;
-        font-size: 12pt;
-    }
-
-    .vax-type-picker-select {
-        width: 100px;
-        text-align: right;
-    }
-
-    .vax-type-picker-punct {
-        color: white;
-        font-size: 18pt;
-        vertical-align: bottom;
-        font-weight: bold;
-    }
-
-    .vax-type-picker-buttons {
-        text-align: right;
-    }
-
-    .vax-type-picker-signature {
-        font-family: Tahoma;
-        color: orange;
-        font-size: 12pt;
-    }
+        .vax-type-picker-signature {
+            font-family: Tahoma;
+            color: orange;
+            font-size: 12pt;
+        }
 
