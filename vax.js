@@ -313,9 +313,9 @@
             });
 
             nodeConfig.attributes  = [];
-            _.each(componentConfig.attributes, function(socket)
+            _.each(componentConfig.attributes, function(attr)
             {
-                nodeConfig.attributes.push(_.clone(socket));
+                nodeConfig.attributes.push(_.clone(attr));
             });
 
             return nodeConfig;
@@ -1577,7 +1577,15 @@
                     {
                         _.each(nodePickle.a, function(val, name)
                         {
-                            nodeConfig.attributes[name].value = val;
+                            for (var i = 0, l = nodeConfig.attributes.length; i < l; ++i)
+                            {
+                                var attr = nodeConfig.attributes[i];
+                                if (attr.name == name)
+                                {
+                                    nodeConfig.attributes[i].default = val;
+                                    break;
+                                }
+                            }
                         });
                     }
 
