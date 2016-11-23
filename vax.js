@@ -333,6 +333,8 @@
         {
             var self = this;
 
+            nodeConfig.typeInstances[typeAlias] = actualType;
+
             var subUpdate = function(subConf)
             {
                 subConf.type = subConf.type.replace('@' + typeAlias, actualType);
@@ -589,73 +591,182 @@
         {
             var self = this;
 
-            if (self.$selector)
+            if (self.selectorDlg)
             {
-                self.$selector.remove();
+                return;
             }
 
-            var $wrapper = self.$selector = $('<div class="vax-component-selector">');
-            $wrapper.append($('<div class="vax-title"/>').text("Choose a component..."));
+            self.newNodeX = self.mouseX;
+            self.newNodeY = self.mouseY;
 
+            var $selectorBody = $('<div class="vax-component-selector"><select data-role="component" class="vax-chosen"/></div>');
+
+            var $select = $('[data-role="component"]', $selectorBody).css({'width': '100%'});
             _.each(self.schema.components, function(component, name)
             {
-                var $component = $('<div class="vax-component"/>').attr('data-vax-component', name);
-
-                var text = component.title;
+                var title = component.title;
                 if (component.typeParams && component.typeParams.length > 0)
                 {
-                    text = text + ' [' + component.typeParams.join(', ') + ']';
+                    title = title + ' [' + component.typeParams.join(', ') + ']';
                 }
-                $component.text(text);
 
-                $wrapper.append($component);
+                var $option = $('<option/>').attr('value', name).text(title);
+                $select.append($option);
             });
 
-            $wrapper.on('click', 'div', function()
+            // on component change
+            $select.on('change', function()
             {
-                var nodeX = self.mouseX;
-                var nodeY = self.mouseY;
-
                 var $this = $(this);
 
-                var component = $this.attr('data-vax-component');
+                var component = $(this).val();
+                var componentConfig = self.schema.components[component];
 
-                var nodeConfig = self.cloneNodeConfig(component);
+                $('.vax-component-types-picker', $selectorBody).remove(); // clear prev types pickers
 
-                // update mouse pos
-                nodeConfig.x = nodeX;
-                nodeConfig.y = nodeY;
-
-                if (nodeConfig.typeParams && nodeConfig.typeParams.length > 0)
+                if (componentConfig.typeParams && componentConfig.typeParams.length > 0)
                 {
-                    if (nodeConfig.typeParams.length == 1)
+                    // allTypes
+                    var $allTypes = $('<div class="vax-component-types-picker"/>');
+
+                    _.each(componentConfig.typeParams, function(typeAlias) {
+                        $allTypes.append($('<hr/>'));
+                        var $typePicker = $('<div class="vax-type-picker"/>').text(typeAlias + ' = ').attr('data-type-alias', typeAlias).attr('data-type-signature', 'Any');
+                        var $typePickerSelect = $('<select class="vax-type-picker-select vax-chosen" data-type-n="1"/>');
+
+                        _.each(self.schema.types, function(type, name)
+                        {
+                            var title = name;
+
+                            var $option = $('<option/>').attr('value', name);
+
+                            if (type.typeParams && type.typeParams.length)
+                            {
+                                title = title + ' [' + type.typeParams.join(',') + ']';
+                                $option.attr('data-type-params-length', type.typeParams.length);
+                            }
+
+                            $option.text(title);
+
+                            $typePickerSelect.append($option);
+                        });
+
+
+                        $typePicker.append($typePickerSelect);
+                        $typePicker.append($('<span data-type-n="1"/>'));
+
+                        $allTypes.append($typePicker);
+                    });
+
+                    // append to selector body
+                    $selectorBody.append($allTypes);
+                    $('.vax-chosen', $allTypes).chosen({});
+                }
+                self.selectorDlg.center();
+            });
+
+            // on type change
+            $($selectorBody).on('change', '.vax-type-picker-select', function(e)
+            {
+                var $this = $(this);
+                var val = $this.val();
+
+                var $parent = $this.parents('.vax-type-picker');
+
+                var $option = $('option[value="' + val + '"]', $this);
+                var n = parseInt($this.attr('data-type-n'));
+                var $span = $('span[data-type-n="' + n +'"]', $parent);
+
+                // empty nested types
+                $span.empty();
+
+                if ($option.attr('data-type-params-length'))
+                {
+                    var l = parseInt($option.attr('data-type-params-length'));
+
+                    $span.append($('<span class="vax-type-picker-punct"> [ </span>'));
+
+                    for (var i = 0; i < l; ++i)
                     {
-                        var paramName = nodeConfig.typeParams[0];
-                        nodeConfig.typeInstances = {};
-                        nodeConfig.typeInstances[paramName] = prompt('Input type name for parameter ' + paramName, 'Any');
+                        var $clone = $this.clone();
 
-                        self.fillTypeInstance(nodeConfig, paramName, nodeConfig.typeInstances[paramName]);
+                        $clone.attr('data-type-n', n + i + 1);
+                        $clone.val('Any');
+                        $clone.show();
 
+                        $span.append($clone);
+                        $span.append($('<span data-type-n="' + (n + i + 1) + '"></span>'));
+
+                        if (i < l - 1)
+                        {
+                            $span.append($('<span class="vax-type-picker-punct"> , </span>'));
+                        }
+
+                        $clone.chosen({});
+                    }
+
+                    $span.append($('<span class="vax-type-picker-punct"> ] </span>'));
+                }
+
+                // serialize type
+                var typeSignature = '';
+                $('select,.vax-type-picker-punct', $parent).each(function()
+                {
+                    var $el = $(this);
+
+                    if ($el.hasClass('vax-type-picker-punct'))
+                    {
+                        typeSignature = typeSignature + $el.text();
                     }
                     else
                     {
-                        return alert("Multiple type params are not yet supported");
+                        typeSignature = typeSignature + $el.val();
                     }
-                }
 
-                vaxRoot.createNode(nodeConfig);
+                    typeSignature = typeSignature.replace(' ', '');
+                    $parent.attr('data-type-signature', typeSignature);
+                });
 
-                $wrapper.remove();
+                self.selectorDlg.center();
             });
 
+            self.selectorDlg = self.ui.createDialog({header: 'Chose a component', body: $selectorBody, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+            self.selectorDlg.show();
 
-            $wrapper.mouseleave(function()
+            // apply chosen
+            $select.chosen({});
+
+            // force first select
+            $select.change();
+
+            // dlg handlers
+            self.selectorDlg.on('ok', function()
             {
-                $wrapper.remove();
+                var component = $select.val();
+                var nodeConfig = self.cloneNodeConfig(component);
+                nodeConfig.x = self.newNodeX;
+                nodeConfig.y = self.newNodeY;
+
+                _.each($('.vax-type-picker'), function(el)
+                {
+                    var $typePicker = $(el);
+                    var typeAlias     = $typePicker.attr('data-type-alias');
+                    var typeSignature = $typePicker.attr('data-type-signature');
+
+                    self.fillTypeInstance(nodeConfig, typeAlias, typeSignature);
+                });
+
+                self.createNode(nodeConfig);
+
+                self.selectorDlg.destroy();
+                delete self.selectorDlg;
             });
 
-            $wrapper.offset({left: self.mouseX - 3, top: self.mouseY - 3});
-            $('body').append($wrapper);
+            self.selectorDlg.on('cancel', function()
+            {
+                self.selectorDlg.destroy();
+                delete self.selectorDlg;
+            })
         };
 
         this.createNode = function(config)
@@ -960,7 +1071,7 @@
 
             this.createDialog = function(options)
             {
-                var $dlg = $('<div class="vax-dlg"/>');
+                var $dlg = $('<div class="vax-dlg vax-text-unselectable"/>');
                 
                 if (options.header)
                 {
@@ -995,10 +1106,81 @@
                     $dlg.append($footer);
                 }
 
-                return $dlg;
+                return new VaxDialog(this, $dlg);
             };
 
             this.init();
+        };
+
+        function VaxDialog(ui, $dlg)
+        {
+            var self = this;
+
+            if (!(ui instanceof VaxUI))
+            {
+                throw new Error("Instance of VaxUI was expected.");
+            }
+
+            this.ui = ui;
+            this.$dlg = $dlg;
+
+            this.handlers = {};
+
+            $('button[data-action]', $dlg).click(function(e)
+            {
+                var $btn = $(this);
+                var action = $btn.attr('data-action');
+
+                self.trigger(action);
+            });
+
+            this.trigger = function(evt)
+            {
+                var self = this;
+                if (this.handlers[evt])
+                {
+                    _.each(self.handlers[evt], function(fn) { fn(); });
+                }
+            };
+
+            this.on = function(action, fn)
+            {
+                if (!this.handlers[action])
+                {
+                    this.handlers[action] = [];
+                }
+
+                this.handlers[action].push(fn);
+                return this;
+            };
+
+            this.show = function()
+            {
+                this.ui.showOverlay();
+
+                var $wrapper = self.ui.vaxRoot.$wrapper;
+                $wrapper.append(self.$dlg);
+
+                this.center();
+            };
+
+            this.center = function()
+            {
+                var $wrapper = this.ui.vaxRoot.$wrapper;
+
+                var left = ($wrapper.width() - self.$dlg.width()) / 2;
+                var top  = ($wrapper.height() - self.$dlg.height()) / 2;
+
+                self.$dlg.css({left: left, top: top});
+            };
+
+            this.destroy = function()
+            {
+                self.$dlg.remove();
+                self.ui.hideOverlay();
+
+                this.trigger('destroy');
+            };
         };
 
         function VaxAttribute(id, node, nodeIndex, config)
@@ -1028,14 +1210,13 @@
 
                 var socketsCount = self.node.getInputSocketsCount();
 
-                self.caption = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 25 + 25, self.config.title + ":");
+                self.caption = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 30 + 25, self.config.title + " | " + self.config.type);
                 self.caption.attr('text-anchor', 'start');
 
                 self.caption.attr({
                     "fill": "#fff",
                     "font-family": "Tahoma",
                     "font-size": "12pt",
-                    "font-weight": "bold",
                     "text-anchor": "start"
                 });
             };
@@ -1047,7 +1228,7 @@
 
                 var socketsCount = self.node.getInputSocketsCount();
 
-                self.valueHolder = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 25 + 40, self.value);
+                self.valueHolder = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 30 + 40, self.value);
                 self.valueHolder.attr('text-anchor', 'start');
 
                 self.valueHolder.attr({

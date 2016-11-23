@@ -114,8 +114,8 @@
         box-shadow: #111 0 0 5px 2px;
 
         position: absolute;
-        top: 120px;
-        left: 120px;
+        min-width: 50px;
+        min-height: 50px;
     }
 
         .vax-dlg-header {
@@ -125,7 +125,7 @@
             font-family: "Georgia", "Times New Roman", serif;
             font-variant: small-caps;
             border-bottom: 1px solid #888;
-            background: #222;
+            background: #333;
         }
 
         .vax-dlg-body {
@@ -135,7 +135,7 @@
 
         .vax-dlg-footer {
             border-top: 1px solid #888;
-            background: #333;
+            background: #222;
             padding: 6px;
             text-align: right;
         }
@@ -164,94 +164,21 @@
                 border: 1px solid silver;
             }
 
-    /* ===COMPONENT SELECTOR */
-    .vax-component-selector {
-        position: absolute;
-        width: 220px;
-        height: auto;
-        background: #111;
-        border:2px solid black;
-        border-radius: 2px;
-        padding: 0px;
-        box-shadow: #111 0 0 5px 2px;
-    }
-        .vax-title {
-            color: gray;
-            font-family: "Georgia";
-            font-variant: small-caps;
-            font-weight: bold;
-            font-size: 12pt;
-            margin: 2px 0;
-            border-bottom: 3px solid #444;
-            padding: 5px;
-        }
-
-        .vax-component {
-            color: white;
-            margin: 2px 0;
-            border-bottom: 1px solid #444;
-            padding: 5px;
-            font-family: "Tahoma";
-            font-size: 10pt;
-            font-weight: bold;
-            cursor: pointer;
-        }
-            .vax-component:hover {
-                background: orange;
-                color: black;
-            }
-
-
     /** ===TYPE PICKER */
-    .vax-help {
-        position: absolute;
-        top: 30px;
-        left: 30px;
-        color: white;
-        font-family: "Georgia";
-        font-variant: small-caps;
-        font-weight: bold;
-        font-size: 14pt;
-    }
-
     .vax-type-picker {
-        position: absolute;
-        background: #222;
-        border-radius: 5px;
-        width: auto;
-        padding: 10px;
-        z-index: 100;
-        box-shadow: #000 0 0 2px 1px;
-        left: 600px;
 
     }
-
-
-        .vax-type-picker-title {
-            color: white;
-            font-weight: bold;
-            font-size: 12pt;
-        }
-
-        .vax-type-picker-select {
-            width: 100px;
-            text-align: right;
-        }
 
         .vax-type-picker-punct {
-            color: white;
-            font-size: 18pt;
-            vertical-align: bottom;
-            font-weight: bold;
-        }
-
-        .vax-type-picker-buttons {
-            text-align: right;
+            font-size: 14pt;
         }
 
         .vax-type-picker-signature {
-            font-family: Tahoma;
+            margin: 10px 0 0 0;
+            border-top: 1px solid silver;
+            padding: 5px;
+            font-family: "Georgia";
             color: orange;
-            font-size: 12pt;
         }
+
 

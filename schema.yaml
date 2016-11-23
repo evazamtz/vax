@@ -14,7 +14,10 @@ types:
     color: "#05f"
   Array:
     color: "#0ff"
-    typeParams: [T] # TODO: support nonvariance, covariance, countervariance
+    typeParams: [T]
+  Pair:
+    color: "#0ff"
+    typeParams: [A,B]
 
 components:
   Constant:
@@ -31,6 +34,23 @@ components:
     out:
       O:
         type: @T
+
+  MakePair:
+    title: Pair
+    color: "0-#495-#075:20-#335"
+    width: 150
+    height: 130
+    typeParams: [A,B]
+    attrs:
+      A:
+        title: A
+        type: @A
+      B:
+        title: A
+        type: @B
+    out:
+      O:
+        type: Pair[@A,@B]
 
   Add:
     title: "+"

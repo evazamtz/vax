@@ -22,6 +22,13 @@ var vaxSchema = {
       "typeParams": [
         "T"
       ]
+    },
+    "Pair": {
+      "color": "#0ff",
+      "typeParams": [
+        "A",
+        "B"
+      ]
     }
   },
   "components": {
@@ -43,6 +50,33 @@ var vaxSchema = {
       "out": {
         "O": {
           "type": "@T"
+        }
+      }
+    },
+    "MakePair": {
+      "title": "Pair",
+      "color": "0-#495-#075:20-#335",
+      "width": 150,
+      "height": 130,
+      "typeParams": [
+        "A",
+        "B"
+      ],
+      "attrs": {
+        "A": {
+          "title": "A",
+          "type": "@A",
+          "default": "-"
+        },
+        "B": {
+          "title": "A",
+          "type": "@B",
+          "default": "-"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "Pair[@A,@B]"
         }
       }
     },
