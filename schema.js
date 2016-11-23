@@ -1,272 +1,268 @@
 var vaxSchema = {
   "types": {
-    "Numeric": {
+    "Relation": {
       "color": "#fff"
     },
-    "Int": {
-      "extends": "Numeric",
+    "Expr": {
+      "color": "#ff0"
+    },
+    "BooleanExpr": {
+      "color": "#ff0",
+      "extends": "Expr"
+    },
+    "NumericExpr": {
+      "color": "#ff0",
+      "extends": "Expr"
+    },
+    "TextExpr": {
+      "color": "#ff0",
+      "extends": "Expr"
+    },
+    "Table": {
+      "extends": "Relation",
+      "color": "#f00"
+    },
+    "Join": {
+      "extends": "Table",
+      "color": "#f00"
+    },
+    "ColumnRef": {
+      "extends": "Expr",
       "color": "#fff"
     },
-    "Float": {
-      "extends": "Numeric",
+    "Column": {
+      "extends": "ColumnRef",
       "color": "#fff"
     },
-    "String": {
-      "color": "#f30"
+    "Columns": {
+      "color": "#f0f"
     },
-    "Boolean": {
-      "color": "#05f"
+    "Select": {
+      "extends": "Relation",
+      "color": "#00f"
     },
-    "Array": {
-      "color": "#0ff",
-      "typeParams": [
-        "T"
-      ]
+    "CTE": {
+      "extends": "Select",
+      "color": "#00f"
     },
-    "Pair": {
-      "color": "#0ff",
-      "typeParams": [
-        "A",
-        "B"
-      ]
-    }
+    "Identifier": null
   },
   "components": {
-    "Constant": {
-      "title": "Constant",
+    "Result": {
+      "title": "Result",
       "color": "0-#495-#075:20-#335",
       "width": 150,
       "height": 80,
-      "typeParams": [
-        "T"
-      ],
-      "attrs": {
-        "V": {
-          "title": "Value",
-          "type": "@T",
-          "default": 0
-        }
-      },
-      "out": {
-        "O": {
-          "type": "@T"
+      "in": {
+        "S": {
+          "title": "Resulting select",
+          "type": "Select"
         }
       }
     },
-    "MakePair": {
-      "title": "Pair",
+    "Select": {
+      "title": "SELECT",
       "color": "0-#495-#075:20-#335",
       "width": 150,
       "height": 130,
-      "typeParams": [
-        "A",
-        "B"
-      ],
+      "in": {
+        "Columns": {
+          "title": "columns",
+          "type": "Columns"
+        },
+        "From": {
+          "title": "FROM",
+          "type": "Relation"
+        },
+        "Where": {
+          "title": "WHERE",
+          "type": "Expr"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "Select"
+        }
+      }
+    },
+    "Table": {
+      "title": "Table",
+      "color": "0-#195-#0a5:30-#635",
+      "width": 150,
+      "height": 80,
       "attrs": {
-        "A": {
-          "title": "A",
-          "type": "@A",
-          "default": "-"
-        },
-        "B": {
-          "title": "A",
-          "type": "@B",
-          "default": "-"
+        "T": {
+          "title": "Table",
+          "type": "Identifier",
+          "default": "tbl_user"
         }
       },
       "out": {
         "O": {
-          "type": "Pair[@A,@B]"
+          "type": "Table"
         }
       }
     },
-    "Add": {
-      "title": "+",
-      "color": "0-#490-#070:20-#333",
-      "width": 100,
+    "Column": {
+      "title": "Column",
+      "color": "0-#32a-#0a5:40-#03a",
+      "width": 150,
       "height": 130,
       "in": {
-        "A": {
-          "type": "Numeric"
+        "R": {
+          "title": "Relation",
+          "type": "Relation"
+        }
+      },
+      "attrs": {
+        "C": {
+          "title": "Name",
+          "type": "Identifier",
+          "default": "id"
         },
-        "B": {
-          "type": "Numeric"
+        "A": {
+          "title": "Alias",
+          "type": "Identifier",
+          "default": "id"
         }
       },
       "out": {
         "O": {
-          "type": "Numeric"
+          "type": "Column"
         }
       }
     },
-    "Sub": {
-      "title": "-",
-      "color": "0-#490-#070:20-#333",
-      "width": 100,
-      "height": 130,
-      "in": {
-        "A": {
-          "type": "Numeric"
-        },
-        "B": {
-          "type": "Numeric"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "Numeric"
-        }
-      }
-    },
-    "Mul": {
+    "AllColumns": {
       "title": "*",
-      "color": "0-#490-#070:20-#333",
-      "width": 100,
-      "height": 130,
+      "color": "0-#32a-#0a5:40-#03a",
+      "width": 150,
+      "height": 80,
       "in": {
-        "A": {
-          "type": "Numeric"
-        },
-        "B": {
-          "type": "Numeric"
+        "R": {
+          "title": "Relation",
+          "type": "Relation"
         }
       },
       "out": {
         "O": {
-          "type": "Numeric"
+          "type": "Columns"
         }
       }
     },
-    "Div": {
-      "title": "/",
-      "color": "0-#490-#070:20-#333",
-      "width": 100,
-      "height": 130,
-      "in": {
-        "A": {
-          "type": "Numeric"
-        },
-        "B": {
-          "type": "Numeric"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "Numeric"
-        }
-      }
-    },
-    "If": {
-      "title": "If",
-      "typeParams": [
-        "T"
-      ],
+    "GatherColumns": {
+      "title": "Gather columns",
+      "color": "0-#32a-#0a5:40-#03a",
+      "width": 150,
       "height": 200,
       "in": {
-        "Condition": {
-          "type": "Boolean"
+        "A": {
+          "title": 1,
+          "type": "Column"
         },
-        "onTrue": {
-          "type": "@T"
+        "B": {
+          "title": 2,
+          "type": "Column"
         },
-        "onFalse": {
-          "type": "@T"
+        "C": {
+          "title": 3,
+          "type": "Column"
+        },
+        "D": {
+          "title": 5,
+          "type": "Column"
+        },
+        "J": {
+          "title": "Other",
+          "type": "Columns"
         }
       },
       "out": {
         "O": {
-          "type": "@T"
+          "type": "Columns"
         }
       }
     },
-    "GreaterThan": {
-      "title": ">",
+    "And": {
+      "title": "AND",
+      "width": 150,
+      "height": 150,
+      "in": {
+        "A": {
+          "title": "A",
+          "type": "BooleanExpr"
+        },
+        "B": {
+          "title": "A",
+          "type": "BooleanExpr"
+        }
+      },
+      "out": {
+        "O": {
+          "title": "AND",
+          "type": "BooleanExpr"
+        }
+      }
+    },
+    "Or": {
+      "title": "OR",
+      "width": 150,
+      "height": 150,
+      "in": {
+        "A": {
+          "title": "A",
+          "type": "BooleanExpr"
+        },
+        "B": {
+          "title": "A",
+          "type": "BooleanExpr"
+        }
+      },
+      "out": {
+        "O": {
+          "title": "O",
+          "type": "BooleanExpr"
+        }
+      }
+    },
+    "Eq": {
+      "title": "=",
+      "width": 150,
+      "height": 150,
+      "in": {
+        "A": {
+          "title": "A",
+          "type": "Expr"
+        },
+        "B": {
+          "title": "A",
+          "type": "Expr"
+        }
+      },
+      "out": {
+        "O": {
+          "title": "O",
+          "type": "BooleanExpr"
+        }
+      }
+    },
+    "CustomSql": {
+      "title": "Custom SQL",
+      "width": 150,
+      "height": 150,
       "typeParams": [
         "T"
       ],
-      "in": {
-        "A": {
+      "attrs": {
+        "S": {
+          "title": "SQL",
+          "type": "@T",
+          "default": 1
+        }
+      },
+      "out": {
+        "O": {
+          "title": "O",
           "type": "@T"
-        },
-        "B": {
-          "type": "@T"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "Boolean"
-        }
-      }
-    },
-    "Replicate": {
-      "typeParams": [
-        "T"
-      ],
-      "in": {
-        "V": {
-          "title": "What",
-          "type": "@T"
-        },
-        "N": {
-          "title": "# of times",
-          "type": "Int"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "Array[@T]"
-        }
-      }
-    },
-    "ArrayLength": {
-      "title": "Array.length",
-      "in": {
-        "A": {
-          "title": "Array",
-          "type": "Array[Any]"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "Int"
-        }
-      }
-    },
-    "NumericToString": {
-      "in": {
-        "N": {
-          "type": "Numeric"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "String"
-        }
-      }
-    },
-    "ConcatStrings": {
-      "in": {
-        "A": {
-          "type": "String"
-        },
-        "B": {
-          "type": "String"
-        }
-      },
-      "out": {
-        "O": {
-          "type": "String"
-        }
-      }
-    },
-    "Result": {
-      "color": "0-#690-#670:20-#933",
-      "width": 80,
-      "height": 70,
-      "title": "Result",
-      "in": {
-        "I": {
-          "type": "String"
         }
       }
     }

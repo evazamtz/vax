@@ -191,6 +191,8 @@
 
         this.buildSchemaTypes = function(schema)
         {
+            var self = this;
+
             var typesConfig = schema.types || {};
 
             var types = {
@@ -210,6 +212,11 @@
 
                 var allExtends = ['Any'];
 
+                if (!type)
+                {
+                    type = {};
+                }
+
                 if (type && type.extends)
                 {
                     // normalize extends
@@ -218,16 +225,16 @@
                         type.extends = [type.extends];
                     }
 
-                    _.each(type.extends, function(typeToExtend)
+                    _.each(type.extends, function(typeNameToExtend)
                     {
-                        if (typeToExtend in types)
+                        if (typeNameToExtend in types)
                         {
-                            allExtends.push(typeToExtend);
-                            allExtends = allExtends.concat(types[typeToExtend.extends]);
+                            allExtends.push(typeNameToExtend);
+                            allExtends = allExtends.concat(types[typeNameToExtend].extends);
                         }
                         else
                         {
-                            throw new Error("Type '" + typeToExtend + "' wasn't found!");
+                            throw new Error("Type '" + typeNameToExtend + "' wasn't found!");
                         }
                     });
                 }
@@ -1305,7 +1312,7 @@
 
             this.getCompactId = function()
             {
-                return self.id.replace('VaxNode-', '');
+                return parseInt(self.id.replace('VaxNode-', ''));
             };
 
             this.getConfig = function()
