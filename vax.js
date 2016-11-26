@@ -1046,7 +1046,9 @@
                         this.drawWire.attr({
                             'stroke': self.config.color,
                             'stroke-width': 3,
+
                         });
+                        this.drawWire.attr(self.isOutput() ? 'arrow-end' : 'arrow-start', 'classic-narrow-long');
                     },
                     // start dragging
                     function (x, y) {
@@ -1843,12 +1845,13 @@
                 var s1 = vaxRoot.sockets[self.inputSocketId];
                 var s2 = vaxRoot.sockets[self.outputSocketId];
 
-                self.path = raphael.path(vax.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY()));
+                self.path = raphael.path(vax.buildWirePath(s2.getCX(), s2.getCY(), s1.getCX(), s1.getCY()));
                 self.path.toBack();
                 self.path.attr({
                     'stroke': s2.config.color, // color of output socket
                     'stroke-width': 3,
-                    'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId
+                    'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId,
+                    'arrow-end': 'classic-narrow-long',
                 });
 
                 self.path.dblclick(function()
