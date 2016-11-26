@@ -18,6 +18,9 @@ var vaxSchema = {
       "color": "#ff0",
       "extends": "Expr"
     },
+    "TimestampExpr": {
+      "extends": "Expr"
+    },
     "Table": {
       "extends": "Relation",
       "color": "#f00"
@@ -30,9 +33,45 @@ var vaxSchema = {
       "extends": "Expr",
       "color": "#fff"
     },
+    "TextColumnRef": {
+      "extends": [
+        "ColumnRef",
+        "TextExpr"
+      ]
+    },
+    "NumericColumnRef": {
+      "extends": [
+        "ColumnRef",
+        "NumericExpr"
+      ]
+    },
+    "TimestampColumnRef": {
+      "extends": [
+        "ColumnRef",
+        "TimestampExpr"
+      ]
+    },
     "Column": {
       "extends": "ColumnRef",
       "color": "#fff"
+    },
+    "TextColumn": {
+      "extends": [
+        "Column",
+        "TextColumnRef"
+      ]
+    },
+    "NumericColumn": {
+      "extends": [
+        "Column",
+        "NumericColumnRef"
+      ]
+    },
+    "TimestampColumn": {
+      "extends": [
+        "Column",
+        "TimestampColumnRef"
+      ]
     },
     "Columns": {
       "color": "#f0f"
@@ -45,91 +84,132 @@ var vaxSchema = {
       "extends": "Select",
       "color": "#00f"
     },
-    "Identifier": null
+    "Identifier": {
+      "color": "#0ff"
+    },
+    "OrderColumns": null,
+    "OrderColumn": {
+      "extends": "OrderColumns"
+    },
+    "Table_User": {
+      "extends": "Table"
+    },
+    "Column_User_Id": {
+      "extends": "NumericColumn"
+    },
+    "Column_User_Name": {
+      "extends": "TextColumn"
+    },
+    "Column_User_Role": {
+      "extends": "TextColumn"
+    },
+    "Column_User_CreatedAt": {
+      "extends": "TimestampColumn"
+    }
   },
   "components": {
-    "Test": {
-      "title": "Test auto",
-      "color": "0-#495-#075:20-#335",
-      "width": 200,
-      "typeParams": [
-        "T"
-      ],
-      "in": {
-        "Columns": {
-          "title": "columns",
-          "type": "Columns"
-        },
-        "From": {
-          "title": "FROM",
-          "type": "Relation"
-        },
-        "Where": {
-          "title": "WHERE",
-          "type": "Expr"
-        }
-      },
+    "Table_User": {
+      "title": "Таблица.Пользователи",
       "attrs": {
         "Alias": {
-          "default": "alias"
-        },
-        "Export": {
-          "default": "Yes"
+          "type": "Identifier",
+          "default": "u"
         }
       },
       "out": {
-        "O": {
-          "type": "Select"
-        }
+        "O": "Table_User"
       }
     },
-    "Result": {
-      "title": "Result",
-      "color": "0-#495-#075:20-#335",
-      "width": 150,
-      "height": 80,
+    "Col_User_Email": {
+      "title": "Пользователь.Email",
       "in": {
-        "S": {
-          "title": "Resulting select",
-          "type": "Select"
+        "T": "Table_User"
+      },
+      "attrs": {
+        "Alias": {
+          "type": "Identifier",
+          "default": "email"
         }
+      },
+      "out": {
+        "O": "TextColumn"
+      }
+    },
+    "Col_User_Role": {
+      "title": "Пользователь.Роль",
+      "in": {
+        "T": "Table_User"
+      },
+      "attrs": {
+        "Alias": {
+          "type": "Identifier",
+          "default": "role"
+        }
+      },
+      "out": {
+        "O": "TextColumn"
+      }
+    },
+    "Col_User_CreatedAt": {
+      "title": "Пользователь.ВремяСоздания",
+      "in": {
+        "T": "Table_User"
+      },
+      "attrs": {
+        "Alias": {
+          "type": "Identifier",
+          "default": "created_at"
+        }
+      },
+      "out": {
+        "O": "TimestampColumn"
       }
     },
     "Select": {
       "title": "SELECT",
       "color": "0-#495-#075:20-#335",
       "width": 150,
-      "height": 130,
       "in": {
-        "Columns": {
-          "title": "columns",
-          "type": "Columns"
-        },
-        "From": {
-          "title": "FROM",
-          "type": "Relation"
-        },
-        "Where": {
-          "title": "WHERE",
-          "type": "Expr"
+        "Cols": "Columns",
+        "FROM": "Relation",
+        "WHERE": "Expr",
+        "ORDER": "OrderColumns"
+      },
+      "attrs": {
+        "Alias": "Identifier"
+      },
+      "out": {
+        "O": "Select"
+      }
+    },
+    "Join": {
+      "title": "JOIN",
+      "color": "0-#495-#075:20-#335",
+      "width": 150,
+      "in": {
+        "L": "Relation",
+        "R": "Expr",
+        "Alias": "Identifier",
+        "ON": "BooleanExpr"
+      },
+      "attrs": {
+        "Type": {
+          "default": "INNER"
         }
       },
       "out": {
-        "O": {
-          "type": "Select"
-        }
+        "O": "Relation"
       }
     },
     "Table": {
       "title": "Table",
       "color": "0-#195-#0a5:30-#635",
       "width": 150,
-      "height": 80,
       "attrs": {
         "T": {
           "title": "Table",
           "type": "Identifier",
-          "default": "tbl_user"
+          "default": "tbl_"
         }
       },
       "out": {
@@ -142,7 +222,6 @@ var vaxSchema = {
       "title": "Column",
       "color": "0-#32a-#0a5:40-#03a",
       "width": 150,
-      "height": 130,
       "in": {
         "R": {
           "title": "Relation",
@@ -157,8 +236,7 @@ var vaxSchema = {
         },
         "A": {
           "title": "Alias",
-          "type": "Identifier",
-          "default": "id"
+          "type": "Identifier"
         }
       },
       "out": {
@@ -170,8 +248,6 @@ var vaxSchema = {
     "AllColumns": {
       "title": "*",
       "color": "0-#32a-#0a5:40-#03a",
-      "width": 150,
-      "height": 80,
       "in": {
         "R": {
           "title": "Relation",
@@ -187,8 +263,6 @@ var vaxSchema = {
     "GatherColumns": {
       "title": "Gather columns",
       "color": "0-#32a-#0a5:40-#03a",
-      "width": 150,
-      "height": 200,
       "in": {
         "A": {
           "title": 1,
@@ -217,10 +291,33 @@ var vaxSchema = {
         }
       }
     },
+    "OrderBy": {
+      "title": "ORDER BY",
+      "color": "0-#32a-#0a5:40-#03a",
+      "in": {
+        "E": {
+          "title": "Expr",
+          "type": "Expr"
+        },
+        "Prev": {
+          "title": "Prev. order",
+          "type": "OrderColumns"
+        }
+      },
+      "attrs": {
+        "D": {
+          "title": "Direction",
+          "default": "ASC"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "OrderColumns"
+        }
+      }
+    },
     "And": {
       "title": "AND",
-      "width": 150,
-      "height": 150,
       "in": {
         "A": {
           "title": "A",
@@ -240,8 +337,6 @@ var vaxSchema = {
     },
     "Or": {
       "title": "OR",
-      "width": 150,
-      "height": 150,
       "in": {
         "A": {
           "title": "A",
@@ -261,8 +356,6 @@ var vaxSchema = {
     },
     "Eq": {
       "title": "=",
-      "width": 150,
-      "height": 150,
       "in": {
         "A": {
           "title": "A",
@@ -282,23 +375,33 @@ var vaxSchema = {
     },
     "CustomSql": {
       "title": "Custom SQL",
-      "width": 150,
-      "height": 150,
       "typeParams": [
         "T"
       ],
       "attrs": {
-        "S": {
-          "title": "SQL",
-          "type": "@T",
-          "default": 1
-        }
+        "SQL": "@T"
       },
       "out": {
-        "O": {
-          "title": "O",
-          "type": "@T"
-        }
+        "O": "@T"
+      }
+    },
+    "Repeat": {
+      "title": "=>>=",
+      "typeParams": [
+        "T"
+      ],
+      "in": {
+        "I": "@T"
+      },
+      "out": {
+        "O": "@T"
+      }
+    },
+    "Result": {
+      "title": "Result",
+      "color": "0-#495-#075:20-#335",
+      "in": {
+        "S": "Select"
       }
     }
   }

@@ -266,8 +266,6 @@
                     component: name,
                     title: name,
                     color: "0-#490-#070:20-#333",
-                    width: 100,
-                    height: 100,
                     typeParams: [],
                     inputSockets: [],
                     attributes: [],
@@ -277,6 +275,11 @@
 
                 var mapSubConfig = function(subConfig, name)
                 {
+                    if (_.isString(subConfig))
+                    {
+                        subConfig = {type: subConfig};
+                    }
+
                     var sub = _.defaults(subConfig, {
                         color: '#fff',
                         name: name,
@@ -922,7 +925,6 @@
             };
         };
 
-
         function VaxSocket(id, node, nodeIndex, config, kind)
         {
             var self = this;
@@ -955,9 +957,9 @@
 
                 var circle = self.isInput()
                     ? raphael.circle(nodeX, nodeY + (self.nodeIndex + 1) * 20 + autoHeightDimensions.caption, 5)
-                    : raphael.circle(nodeX + self.node.getWidth(), nodeY + autoHeightDimensions.attributes + (self.nodeIndex + 1) * 20, 5);
+                    : raphael.circle(nodeX, nodeY + autoHeightDimensions.attributes + (self.nodeIndex + 1) * 20, 5);
 
-                self.node.getDraggingGroup().addCircle(circle);
+                self.circle = circle;
 
                 return circle;
             };
@@ -983,7 +985,28 @@
                     "font-family": "Tahoma",
                     "font-size": "10pt"
                 });
+            };
 
+            this.getBoundingBoxWidth = function()
+            {
+                return this.caption.getBBox().width + 10 + 10;
+            };
+
+            this.alignToNodeWidth = function()
+            {
+                var nodeX = self.node.getX();
+                var nodeWidth = self.node.getWidth();
+
+                if (self.isOutput())
+                {
+                    self.circle.attr('cx', nodeX + nodeWidth);
+                    self.caption.attr('x', nodeX + nodeWidth - 10);
+                }
+            };
+
+            this.attachToNodeDraggingGroup = function()
+            {
+                self.node.getDraggingGroup().addCircle(self.circle);
                 self.node.getDraggingGroup().addText(self.caption);
             };
 
@@ -1369,6 +1392,11 @@
                 this.node.getDraggingGroup().addText(self.valueHolder);
             };
 
+            this.getBoundingBoxWidth = function()
+            {
+                return Math.max(this.valueHolder.getBBox().width, this.caption.getBBox().width + 20);
+            };
+
             this.invokeValuePicker = function()
             {
                 var self = this;
@@ -1464,11 +1492,6 @@
                 return self.config;
             };
 
-            this.calcAutoWidth = function()
-            {
-                var maxWidth = 500;
-            };
-
             this.calcAutoHeightDimensions = function()
             {
                 var hasTypeParams = self.config.typeParams.length > 0;
@@ -1508,29 +1531,18 @@
             {
                 var autoHeight = this.calcAutoHeightDimensions().total;
 
-                // self graphics
-                self.bgRect = raphael.rect(self.config.x, self.config.y, self.config.width, autoHeight, 10);
-                self.bgRect.attr({
-                    fill: '#111',
-                    opacity: .5,
-                    stroke: "#000",
-                    "stroke-opacity": 1
+                // creating move container with width of 10, since we don't know actual width
+                self.moveContainer = raphael.rect(self.config.x, self.config.y, 10, autoHeight, 10);
+                self.moveContainer.attr({
+                    fill: '#000',
+                    opacity: .0,
+                    cursor: 'move'
                 });
 
-                var hasTypeParams = self.config.typeParams.length > 0;
+                // create dragging group
+                self.draggingGroup = vaxRoot.createDraggingGroup(self.moveContainer);
 
-                self.captionRect = raphael.rect(self.config.x, self.config.y, self.config.width, hasTypeParams ? 42 : 30, 10);
-                self.captionRect.attr({
-                    fill: self.config.color,
-                    "stroke-width": 0
-                });
-
-                self.captionRect2 = raphael.rect(self.config.x, self.config.y + 10, self.config.width, hasTypeParams ? 32 : 20);
-                self.captionRect2.attr({
-                    fill: self.config.color,
-                    "stroke-width": 0
-                });
-
+                // create node caption
                 self.nodeCaption = raphael.text(self.config.x + 10, self.config.y + 15, self.config.title);
                 self.nodeCaption.attr({
                     "font-family": "Tahoma",
@@ -1539,7 +1551,10 @@
                     "fill": "#fff",
                     "text-anchor": "start"
                 });
+                self.draggingGroup.addText(self.nodeCaption);
 
+                // create type caption
+                var hasTypeParams = self.config.typeParams.length > 0;
                 if (hasTypeParams)
                 {
                     var typeTitle = hasTypeParams ? '[' + _.toArray(self.config.typeInstances).join(',') + ']' : '';
@@ -1552,22 +1567,12 @@
                         "fill": "#ddd",
                         "text-anchor": "start"
                     });
-                }
 
-                self.moveContainer = raphael.rect(self.config.x, self.config.y, self.config.width, autoHeight, 10);
-                self.moveContainer.attr({
-                    fill: '#000',
-                    opacity: .0,
-                    cursor: 'move'
-                });
-
-                // create dragging group
-                self.draggingGroup = vaxRoot.createDraggingGroup(self.moveContainer);
-                self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2).addText(self.nodeCaption);
-                if (hasTypeParams)
-                {
                     self.draggingGroup.addText(self.typeCaption);
                 }
+
+                // moveContainer in front of captions
+                self.moveContainer.toFront();
 
                 // input sockets
                 for (var i = 0; i < self.config.inputSockets.length; ++i) {
@@ -1591,6 +1596,56 @@
                     self.outputSockets[socketId] = outputSocket;
                     vaxRoot.sockets[socketId] = outputSocket;
                 }
+
+                // calc final width of node
+                var widths = [self.nodeCaption.getBBox().width + 20];
+                if (hasTypeParams)
+                {
+                    widths.push(self.nodeCaption.getBBox().width + 20);
+                }
+
+                var inputSocketsWidths  = _.map(self.inputSockets,  function(socket) { return socket.getBoundingBoxWidth(); });
+                var outputSocketsWidths = _.map(self.outputSockets, function(socket) { return socket.getBoundingBoxWidth(); });
+                var attributesWidths    = _.map(self.attributes,    function(socket) { return socket.getBoundingBoxWidth(); });
+
+                widths = widths.concat(inputSocketsWidths, outputSocketsWidths, attributesWidths);
+
+                var nodeWidth = _.max(widths);
+
+                // move container
+                self.moveContainer.attr('width', nodeWidth);
+
+                // bg graphics
+                self.bgRect = raphael.rect(self.config.x, self.config.y, nodeWidth, autoHeight, 10);
+                self.bgRect.attr({
+                    fill: '#111',
+                    opacity: .5,
+                    stroke: "#000",
+                    "stroke-opacity": 1
+                });
+                self.bgRect.toBack();
+
+                self.captionRect2 = raphael.rect(self.config.x, self.config.y + 10, nodeWidth, hasTypeParams ? 32 : 20);
+                self.captionRect2.attr({
+                    fill: self.config.color,
+                    "stroke-width": 0
+                });
+                self.captionRect2.toBack();
+
+                // caption rect
+                self.captionRect = raphael.rect(self.config.x, self.config.y, nodeWidth, hasTypeParams ? 42 : 30, 10);
+                self.captionRect.attr({
+                    fill: self.config.color,
+                    "stroke-width": 0
+                });
+                self.captionRect.toBack();
+
+                // add bg graphics to dragging group
+                self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2);
+
+                // realign sockets to a new node width and attach to dragging group
+                _.each(self.inputSockets, function(socket) { socket.alignToNodeWidth(); socket.attachToNodeDraggingGroup(); });
+                _.each(self.outputSockets, function(socket) { socket.alignToNodeWidth(); socket.attachToNodeDraggingGroup(); });
 
                 // refresh scrollbars sliders
                 vaxRoot.refreshScrollSliders();
@@ -1699,7 +1754,7 @@
             };
 
             this.getWidth = function () {
-                return self.config.width;
+                return self.moveContainer.attr('width')
             };
 
             this.getHeight = function () {
