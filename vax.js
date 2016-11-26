@@ -435,7 +435,7 @@
             });
 
             $(document).keyup(function (evt) { // should be a DOM node for that
-                if (evt.which == 88) // X key
+                if (evt.keyCode == 88) // X key
                 {
                     self.showComponentSelector();
                 }
@@ -443,6 +443,11 @@
                 if (evt.keyCode == 32) // spacebar
                 {
                     self.isSpacebarDown = false;
+                }
+
+                if (evt.keyCode == 46 || evt.keyCode == 8) // Delete
+                {
+                    self.selection.removeSelectedElements();
                 }
             });
 
@@ -1081,6 +1086,7 @@
 
             this.vaxRoot = vax;
             this.nodesIds = [];
+            this.wiresIds = [];
 
             this.getNodesIds = function()
             {
@@ -1099,18 +1105,45 @@
                     }
                 });
 
-                this.nodes = {};
+                _.each(this.wiresIds, function(wireId)
+                {
+                    if (wireId in vaxRoot.wires)
+                    {
+                        vaxRoot.wires[wireId].deselect();
+                    }
+                });
+
+                this.nodesIds = [];
+                this.wiresIds = [];
             };
 
             this.testByRect = function(rect)
             {
-                return _.map(
+                var nodesIds = _.map(
                     _.filter(
                         this.vaxRoot.nodes,
                         function(node) { return window.vax.doesRectangleContainOther(rect, node.getBoundingBox()); }
                     ),
                     function(node) { return node.getId(); }
                 );
+
+                var wiresIds = [];
+
+                if (_.size(nodesIds) == 0)
+                {
+                    wiresIds = _.map(
+                        _.filter(
+                            this.vaxRoot.wires,
+                            function(wire) { return wire.doesIntersectWithRect(rect); }
+                        ),
+                        function(wire) { return wire.getId(); }
+                    );
+                }
+
+                return {
+                    nodesIds: nodesIds,
+                    wiresIds: wiresIds
+                };
             };
 
             this.selectByNodeId = function(nodeId)
@@ -1132,7 +1165,10 @@
             this.selectByRect = function(rect)
             {
                 this.clear();
-                this.nodesIds = this.testByRect(rect);
+
+                var selected = this.testByRect(rect);
+                this.nodesIds = selected.nodesIds;
+                this.wiresIds = selected.wiresIds;
 
                 _.each(this.nodesIds, function(nodeId)
                 {
@@ -1141,19 +1177,43 @@
                         vaxRoot.nodes[nodeId].highlightSelection();
                     }
                 });
-            };
 
-            this.removeNodes = function()
-            {
-                _.each(this.nodesIds, function(nodeId)
+                _.each(this.wiresIds, function(wireId)
                 {
-                    if (nodeId in vaxRoot.nodes)
+                    if (wireId in vaxRoot.wires)
                     {
-                        vaxRoot.nodes[nodeId].remove();
+                        vaxRoot.wires[wireId].highlightSelection();
                     }
                 });
+            };
 
-                this.nodesIds = [];
+            this.removeSelectedElements = function()
+            {
+                if (_.size(this.nodesIds) > 0 && confirm('Вы действительно хотите удалить выделенные узлы?'))
+                {
+                    _.each(this.nodesIds, function(nodeId)
+                    {
+                        if (nodeId in vaxRoot.nodes)
+                        {
+                            vaxRoot.nodes[nodeId].remove();
+                        }
+                    });
+
+                    this.nodesIds = [];
+                }
+
+                if (_.size(this.wiresIds) > 0 && confirm('Вы действительно хотите удалить выделенные связи?'))
+                {
+                    _.each(this.wiresIds, function(wireId)
+                    {
+                        if (wireId in vaxRoot.wires)
+                        {
+                            vaxRoot.wires[wireId].remove();
+                        }
+                    });
+
+                    this.wiresIds = [];
+                }
             };
         };
 
@@ -1891,10 +1951,7 @@
                 // remove selection on 2x click
                 self.moveContainer.dblclick(function()
                 {
-                    if (confirm('Вы действительно хотите удалить выделенные узлы?'))
-                    {
-                        self.getVAX().selection.removeNodes();
-                    }
+                    self.getVAX().selection.removeSelectedElements();
                 });
 
                 // dragging group handlers
@@ -2129,6 +2186,11 @@
                 this.refresh();
             };
 
+            this.getId = function()
+            {
+                return this.id;
+            };
+
             this.getInputSocketId = function()
             {
                 return self.inputSocketId;
@@ -2149,22 +2211,14 @@
                 var s1 = vaxRoot.sockets[self.inputSocketId];
                 var s2 = vaxRoot.sockets[self.outputSocketId];
 
-                self.path = raphael.path(vax.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY()));
+                self.pathString = vax.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY());
+                self.path = raphael.path(self.pathString);
                 self.path.toBack();
                 self.path.attr({
                     'stroke': s2.config.color, // color of output socket
                     'stroke-width': 3,
                     'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId,
                     'arrow-start': 'classic-narrow-long',
-                });
-
-                self.path.dblclick(function()
-                {
-                    self.path.animate({"stroke-opacity":0}, 150, "linear", function()
-                    {
-                        delete vaxRoot.wires[self.id];
-                        self.remove();
-                    });
                 });
             };
 
@@ -2177,6 +2231,82 @@
                 if (self.path)
                 {
                     self.path.remove();
+                }
+
+                if (self.glow)
+                {
+                    self.glow.remove();
+                }
+            };
+
+            this.doesIntersectWithRect = function(rect)
+            {
+                if (!this.path)
+                {
+                    return false;
+                }
+
+                // rough check of bounding box intersction
+                var rbb = this.path.getBBox();
+
+                var bb = {
+                    left: rbb.x,
+                    top: rbb.y,
+                    right: rbb.x + rbb.width,
+                    bottom: rbb.y + rbb.height
+                };
+
+                var bbIntersects = (
+                    rect.left < bb.right
+                    && rect.right > bb.left
+                    && rect.top < bb.bottom
+                    && rect.bottom > bb.top
+                );
+
+                if (!bbIntersects)
+                {
+                    return false;
+                }
+
+                // for each line of rect, we check if it intersects with pathString
+                /**   A-------B
+                 *    |       |
+                 *    |       |
+                 *    C-------D
+                 */
+
+                var ab = vax.buildPath(['M', rect.left,  rect.top,    'L', rect.right, rect.top]);
+                var bd = vax.buildPath(['M', rect.right, rect.top,    'L', rect.right, rect.bottom]);
+                var dc = vax.buildPath(['M', rect.right, rect.bottom, 'L', rect.left,  rect.bottom]);
+                var ca = vax.buildPath(['M', rect.left,  rect.bottom, 'L', rect.left,  rect.top]);
+
+                var rectLines = [ab, bd, dc, ca];
+                for (var i = 0, l = rectLines.length; i < l; ++i)
+                {
+                    var rectLine = rectLines[i];
+
+                    if (Raphael.pathIntersection(self.pathString, rectLine).length > 0)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            this.highlightSelection = function()
+            {
+                if (self.path)
+                {
+                    self.glow = self.path.glow({color: '#fa0'});
+                }
+            };
+
+            this.deselect = function()
+            {
+                if (self.glow)
+                {
+                    self.glow.remove();
                 }
             };
 
