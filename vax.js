@@ -135,8 +135,12 @@
 
         // setting states of down-move-up operations
         this.isDragging  = false;
+        this.isWiring = false;
         this.isSelecting = false;
         this.isPanning   = false;
+        this.isSpacebarDown = false;
+
+        // selection rectangle
         this.selectionRect = null;
 
         // the selection
@@ -422,11 +426,23 @@
                 self.mouseY = e.pageY - canvasOffset.top  + viewBox.top;
             }).mouseover(); // call the handler immediately
 
+            $(document).keydown(function (evt)
+            {
+                if (evt.keyCode == 32) // spacebar
+                {
+                    self.isSpacebarDown = true;
+                }
+            });
 
             $(document).keyup(function (evt) { // should be a DOM node for that
                 if (evt.which == 88) // X key
                 {
                     self.showComponentSelector();
+                }
+
+                if (evt.keyCode == 32) // spacebar
+                {
+                    self.isSpacebarDown = false;
                 }
             });
 
@@ -440,21 +456,33 @@
             // selection handler
             self.$canvas.mousedown(function(e)
             {
-                if (self.isDragging || self.isPanning || self.isSelecting)
+                if (self.isDragging || self.isPanning || self.isSelecting || self.isWiring)
                 {
                     return;
                 }
 
-                self.isSelecting = true;
+                if (self.isSpacebarDown || e.which == 2) // panning
+                {
+                    self.isPanning = true;
 
-                self.selectionStartX = self.mouseX;
-                self.selectionStartY = self.mouseY;
+                    self.$canvas.addClass('vax-is-panning');
 
-                self.selectionRect = self.raphael.rect(self.mouseX, self.mouseY, 1, 1, 2);
-                self.selectionRect.attr({
-                    'stroke': '#f90',
-                    'stroke-dasharray': ['.']
-                });
+                    self.panningStartX = self.mouseX;
+                    self.panningStartY = self.mouseY;
+                }
+                else // selecting
+                {
+                    self.isSelecting = true;
+
+                    self.selectionStartX = self.mouseX;
+                    self.selectionStartY = self.mouseY;
+
+                    self.selectionRect = self.raphael.rect(self.mouseX, self.mouseY, 1, 1, 2);
+                    self.selectionRect.attr({
+                        'stroke': '#f90',
+                        'stroke-dasharray': ['.']
+                    });
+                }
             });
 
             $(document).mousemove(function()
@@ -479,11 +507,23 @@
 
                     self.selectionRect.attr({x: x, y: y, width: w, height: h});
                 }
+                else if (self.isPanning)
+                {
+                    var panToX = -(self.mouseX - self.panningStartX) / 2 + self.viewBox.left;
+                    var panToY = -(self.mouseY - self.panningStartY) / 2 + self.viewBox.top;
+
+                    self.panningStartX = self.mouseX;
+                    self.panningStartY = self.mouseY;
+
+                    self.panTo(panToX, panToY);
+                }
             });
 
             $(document).mouseup(function(e)
             {
                 self.isSelecting = false;
+                self.isPanning   = false;
+                self.$canvas.removeClass('vax-is-panning');
 
                 if (self.selectionRect)
                 {
@@ -1223,6 +1263,7 @@
 
                 // init drag handlers
                 self.circle.drag(
+                    // drag
                     function (dx, dy, nx, ny)
                     {
                         if (this.drawWire)
@@ -1242,8 +1283,10 @@
                         });
                         this.drawWire.attr(self.isOutput() ? 'arrow-end' : 'arrow-start', 'classic-narrow-long');
                     },
+
                     // start dragging
                     function (x, y) {
+                        self.vaxRoot.isWiring = true;
                         self.circle.attr({fill: self.config.color});
                     },
                     // end
@@ -1284,6 +1327,8 @@
                         }
 
                         self.refreshState(); // refresh state of circle
+
+                        self.vaxRoot.isWiring = false;
                     }
                 );
 

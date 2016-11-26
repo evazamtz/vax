@@ -17,6 +17,10 @@
         background: url("vax-grid.jpg") #222 repeat;
     }
 
+    .vax-is-panning {
+        cursor: url('closedhand.cur'), default;
+    }
+
     .vax-overlay {
         display: none;
         position: absolute;
