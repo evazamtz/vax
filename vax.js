@@ -938,12 +938,14 @@
 
             this.createCircle = function()
             {
+                var autoHeightDimensions = self.node.calcAutoHeightDimensions();
+
                 var nodeX = self.node.getX();
                 var nodeY = self.node.getY();
 
                 var circle = self.isInput()
-                    ? raphael.circle(nodeX, nodeY + (self.nodeIndex + 1) * 20 + 30, 5)
-                    : raphael.circle(nodeX + self.node.getWidth(), nodeY + self.node.getHeight() - (self.nodeIndex + 1) * 20, 5);
+                    ? raphael.circle(nodeX, nodeY + (self.nodeIndex + 1) * 20 + autoHeightDimensions.caption, 5)
+                    : raphael.circle(nodeX + self.node.getWidth(), nodeY + autoHeightDimensions.attributes + (self.nodeIndex + 1) * 20, 5);
 
                 self.node.getDraggingGroup().addCircle(circle);
 
@@ -969,7 +971,7 @@
                 self.caption.attr({
                     "fill": "#fff",
                     "font-family": "Tahoma",
-                    "font-size": "10pt",
+                    "font-size": "10pt"
                 });
 
                 self.node.getDraggingGroup().addText(self.caption);
@@ -1312,15 +1314,24 @@
                 var nodeX = self.node.getX();
                 var nodeY = self.node.getY();
 
-                var socketsCount = self.node.getInputSocketsCount();
+                var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
-                self.caption = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 30 + 25, self.config.title + " | " + self.config.type);
+                self.rect = raphael.rect(nodeX + 5, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35 - 19, 10, 10, 2);
+                self.rect.attr({
+                    "fill": vaxRoot.getColorOfParsedType(self.config.type),
+                    "stroke-width": 0,
+                });
+                this.node.getDraggingGroup().addRect(self.rect);
+
+
+                self.caption = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35 - 15, self.config.title);
                 self.caption.attr('text-anchor', 'start');
 
                 self.caption.attr({
                     "fill": "#fff",
                     "font-family": "Tahoma",
                     "font-size": "12pt",
+                    "font-weight": "bold",
                     "text-anchor": "start"
                 });
 
@@ -1332,9 +1343,9 @@
                 var nodeX = self.node.getX();
                 var nodeY = self.node.getY();
 
-                var socketsCount = self.node.getInputSocketsCount();
+                var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
-                self.valueHolder = raphael.text(nodeX + 8, nodeY + socketsCount * 20 + (self.nodeIndex + 1) * 30 + 40, self.value);
+                self.valueHolder = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35, self.value);
                 self.valueHolder.attr('text-anchor', 'start');
 
                 self.valueHolder.attr({
@@ -1409,10 +1420,52 @@
                 return self.config;
             };
 
-            this.init = function () {
+            this.calcAutoWidth = function()
+            {
+                var maxWidth = 500;
+            };
+
+            this.calcAutoHeightDimensions = function()
+            {
+                var hasTypeParams = self.config.typeParams.length > 0;
+                var captionHeight = hasTypeParams ? 42 : 30;
+
+                var padding      = 15;
+                var socketHeight = 20;
+                var attrHeight   = 35;
+
+                var inputSocketCount  = _.size(this.config.inputSockets);
+                var outputSocketCount = _.size(this.config.outputSockets);
+                var attrCount         = _.size(this.config.attributes);
+
+                var inputSocketsHeight = captionHeight + inputSocketCount * socketHeight;
+                var attributesHeight   = inputSocketsHeight + attrCount * attrHeight;
+
+                var totalHeight = (
+                    captionHeight
+                    + inputSocketCount * socketHeight
+                    + outputSocketCount * socketHeight
+                    + attrCount * attrHeight
+                    + padding
+                );
+
+                var dimensions = {
+                    caption: captionHeight,
+                    inputSockets: inputSocketsHeight,
+                    attributes: attributesHeight,
+                    total: totalHeight
+                };
+
+                return dimensions;
+            };
+
+
+            this.init = function ()
+            {
+                var autoHeight = this.calcAutoHeightDimensions().total;
 
                 // self graphics
-                self.bgRect = raphael.rect(self.config.x, self.config.y, self.config.width, self.config.height, 10);
+                self.bgRect = raphael.rect(self.config.x, self.config.y, self.config.width, autoHeight, 10);
                 self.bgRect.attr({
                     fill: '#111',
                     opacity: .5,
@@ -1420,26 +1473,22 @@
                     "stroke-opacity": 1
                 });
 
-                self.captionRect = raphael.rect(self.config.x, self.config.y, self.config.width, 30, 10);
+                var hasTypeParams = self.config.typeParams.length > 0;
+
+                self.captionRect = raphael.rect(self.config.x, self.config.y, self.config.width, hasTypeParams ? 42 : 30, 10);
                 self.captionRect.attr({
                     fill: self.config.color,
                     "stroke-width": 0
                 });
 
-                self.captionRect2 = raphael.rect(self.config.x, self.config.y + 10, self.config.width, 20);
+                self.captionRect2 = raphael.rect(self.config.x, self.config.y + 10, self.config.width, hasTypeParams ? 32 : 20);
                 self.captionRect2.attr({
                     fill: self.config.color,
                     "stroke-width": 0
                 });
 
-                var nodeTitle = self.config.title;
-                if (self.config.typeParams.length > 0)
-                {
-                    nodeTitle = nodeTitle + ' [' + _.toArray(self.config.typeInstances).join(',') + ']';
-                }
-
-                self.caption = raphael.text(self.config.x + 10, self.config.y + 15, nodeTitle);
-                self.caption.attr({
+                self.nodeCaption = raphael.text(self.config.x + 10, self.config.y + 15, self.config.title);
+                self.nodeCaption.attr({
                     "font-family": "Tahoma",
                     "font-size": "12pt",
                     "font-weight": "bold",
@@ -1447,7 +1496,21 @@
                     "text-anchor": "start"
                 });
 
-                self.moveContainer = raphael.rect(self.config.x, self.config.y, self.config.width, self.config.height, 10);
+                if (hasTypeParams)
+                {
+                    var typeTitle = hasTypeParams ? '[' + _.toArray(self.config.typeInstances).join(',') + ']' : '';
+
+                    self.typeCaption = raphael.text(self.config.x + 10, self.config.y + 30, typeTitle);
+                    self.typeCaption.attr({
+                        "font-family": "Tahoma",
+                        "font-size": "10pt",
+                        "font-weight": "bold",
+                        "fill": "#ddd",
+                        "text-anchor": "start"
+                    });
+                }
+
+                self.moveContainer = raphael.rect(self.config.x, self.config.y, self.config.width, autoHeight, 10);
                 self.moveContainer.attr({
                     fill: '#000',
                     opacity: .0,
@@ -1456,7 +1519,11 @@
 
                 // create dragging group
                 self.draggingGroup = vaxRoot.createDraggingGroup(self.moveContainer);
-                self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2).addText(self.caption);
+                self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2).addText(self.nodeCaption);
+                if (hasTypeParams)
+                {
+                    self.draggingGroup.addText(self.typeCaption);
+                }
 
                 // input sockets
                 for (var i = 0; i < self.config.inputSockets.length; ++i) {

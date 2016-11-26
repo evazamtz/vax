@@ -48,6 +48,41 @@ var vaxSchema = {
     "Identifier": null
   },
   "components": {
+    "Test": {
+      "title": "Test auto",
+      "color": "0-#495-#075:20-#335",
+      "width": 200,
+      "typeParams": [
+        "T"
+      ],
+      "in": {
+        "Columns": {
+          "title": "columns",
+          "type": "Columns"
+        },
+        "From": {
+          "title": "FROM",
+          "type": "Relation"
+        },
+        "Where": {
+          "title": "WHERE",
+          "type": "Expr"
+        }
+      },
+      "attrs": {
+        "Alias": {
+          "default": "alias"
+        },
+        "Export": {
+          "default": "Yes"
+        }
+      },
+      "out": {
+        "O": {
+          "type": "Select"
+        }
+      }
+    },
     "Result": {
       "title": "Result",
       "color": "0-#495-#075:20-#335",
