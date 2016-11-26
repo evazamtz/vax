@@ -481,36 +481,39 @@
 
                     self.selectionStartX = self.mouseX;
                     self.selectionStartY = self.mouseY;
-
-                    self.selectionRect = self.raphael.rect(self.mouseX, self.mouseY, 1, 1, 2);
-                    self.selectionRect.attr({
-                        'stroke': '#f90',
-                        'stroke-dasharray': ['.']
-                    });
                 }
             });
 
             $(document).mousemove(function()
             {
-                if (self.isSelecting)
-                {
+                if (self.isSelecting) {
+
                     var x = self.selectionStartX;
                     var y = self.selectionStartY;
                     var w = self.mouseX - self.selectionStartX;
                     var h = self.mouseY - self.selectionStartY;
 
-                    if (w < 0)
-                    {
+                    if (w < 0) {
                         x = x + w;
                         w = -w;
                     }
-                    if (h < 0)
-                    {
+                    if (h < 0) {
                         y = y + h;
                         h = -h;
                     }
 
-                    self.selectionRect.attr({x: x, y: y, width: w, height: h});
+                    if (!self.selectionRect) {
+                        self.selectionRect = self.raphael.rect(x, y, w, h, 2);
+                        self.selectionRect.attr({
+                            'stroke': '#0f0',
+                            'stroke-dasharray': ['.'],
+                            'stroke-width': 1
+                        });
+                    }
+                    else
+                    {
+                        self.selectionRect.attr({x: x, y: y, width: w, height: h});
+                    }
                 }
                 else if (self.isPanning)
                 {
@@ -1734,12 +1737,12 @@
                 // change handler
                 _.each([self.rect, self.caption, self.valueHolder], function(el)
                 {
-                    el.dblclick(function()
+                    el.click(function()
                     {
                         self.invokeValuePicker();
                     });
 
-                    el.attr('title', 'Double click to change this value');
+                    el.attr({'title': 'Click to change this value', 'cursor': 'pointer'});
                 });
 
             };
@@ -2298,7 +2301,7 @@
             {
                 if (self.path)
                 {
-                    self.glow = self.path.glow({color: '#fa0'});
+                    self.glow = self.path.glow({color: '#fb0', 'width': 15});
                 }
             };
 
