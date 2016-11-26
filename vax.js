@@ -910,6 +910,16 @@
 
                 return this;
             };
+
+            this.remove = function()
+            {
+                _.each(self.children, function(child)
+                {
+                    child.shape.remove();
+                });
+
+                self.rootRect.remove();
+            };
         };
 
 
@@ -1353,24 +1363,58 @@
                     "font-family": "Tahoma",
                     "font-size": "12pt",
                     "font-weight": "bold",
-                    "text-anchor": "start"
-                });
-
-                // change value
-                self.valueHolder.dblclick(function()
-                {
-                    var newValue = prompt("Enter value", self.value);
-                    self.value = newValue;
-                    self.valueHolder.attr("text", newValue);
+                    "text-anchor": "start",
                 });
 
                 this.node.getDraggingGroup().addText(self.valueHolder);
+            };
+
+            this.invokeValuePicker = function()
+            {
+                var self = this;
+
+                if (self.pickerDlg)
+                {
+                    return;
+                }
+
+                var $body = $('<input type="text"/>').val(self.value);
+                self.pickerDlg = self.vax.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+                self.pickerDlg.show();
+
+                self.pickerDlg.on('ok', function()
+                {
+                    var newValue = $body.val();
+                    self.value = newValue;
+                    self.valueHolder.attr("text", newValue);
+
+                    self.pickerDlg.destroy();
+                    delete self.pickerDlg;
+                });
+
+                self.pickerDlg.on('cancel', function()
+                {
+                    self.pickerDlg.destroy();
+                    delete self.pickerDlg;
+                });
             };
 
             this.init = function () {
 
                 self.createCaption();
                 self.createValueHolder();
+
+                // change handler
+                _.each([self.rect, self.caption, self.valueHolder], function(el)
+                {
+                    el.dblclick(function()
+                    {
+                        self.invokeValuePicker();
+                    });
+
+                    el.attr('title', 'Double click to change this value');
+                });
+
             };
 
             this.init();
@@ -1402,7 +1446,7 @@
 
             this.getVAX = function()
             {
-                return this.vax;
+                return vaxRoot;
             };
 
             this.getId = function()
@@ -1616,10 +1660,6 @@
                         wire.remove();
                     });
 
-                    // remove graphics
-                    socket.circle.remove();
-                    socket.caption.remove();
-
                     // delete from repository
                     delete vaxRoot.sockets[socket.id];
                 };
@@ -1628,20 +1668,10 @@
                 _.each(self.inputSockets,  removeSocket);
                 _.each(self.outputSockets, removeSocket);
 
-                // remove attrs
-                _.each(self.attributes, function(attr)
-                {
-                    attr.caption.remove();
-                    attr.valueHolder.remove();
-                });
+                // remove graphics
+                self.draggingGroup.remove();
 
-                // remove itself
-                self.moveContainer.remove();
-                self.caption.remove();
-                self.captionRect.remove();
-                self.captionRect2.remove();
-                self.bgRect.remove();
-
+                // delete from repositore
                 delete vaxRoot.nodes[self.id];
             };
 
