@@ -53,9 +53,14 @@
             }
         },
 
-        template: function(tpl, data)
+        doesRectangleContainOther: function(outerRect, innerRect)
         {
-            throw new Error("not implemented yet");
+            return (
+                outerRect.left <= innerRect.left
+                && outerRect.top <= innerRect.top
+                && outerRect.right >= innerRect.right
+                && outerRect.bottom >= innerRect.bottom
+            );
         },
 
     }); // vax.extend
@@ -106,7 +111,7 @@
             );
         $wrapper.append($vertScrollbar);
 
-        // dragging helper object
+        // dragging scrollbars helper object
         this.scollbarsDragging = {
             horizontal: {
                 isDragging: false,
@@ -128,6 +133,16 @@
         // create ui
         this.ui = new VaxUI(this);
 
+        // setting states of down-move-up operations
+        this.isDragging  = false;
+        this.isSelecting = false;
+        this.isPanning   = false;
+        this.selectionRect = null;
+
+        // the selection
+        this.selection = new VaxSelection(this);
+
+        // default config
         this.config = _.defaults(config, {
             schema: {
                 types: {},
@@ -310,7 +325,7 @@
             return components;
         };
 
-        this.cloneNodeConfig = function(component)
+        this.cloneComponentConfig = function(component)
         {
             var componentConfig = this.schema.components[component];
 
@@ -383,6 +398,18 @@
         this.sockets = {};
         this.wires = {};
 
+        this.getNodeById = function(id)
+        {
+            if (id in this.nodes)
+            {
+                return this.nodes[id]
+            }
+            else
+            {
+                throw new Error("Node with id: " + id + " wasn't found!");
+            }
+        };
+
         this.init = function()
         {
             var self = this;
@@ -403,15 +430,75 @@
                 }
             });
 
-            this.initScrollbarsHandlers();
-
             // draw scrollbars
+            this.initScrollbarsHandlers();
             this.refreshScrollSliders();
 
             // init ui
             this.ui.init();
-        };
 
+            // selection handler
+            self.$canvas.mousedown(function(e)
+            {
+                if (self.isDragging || self.isPanning || self.isSelecting)
+                {
+                    return;
+                }
+
+                self.isSelecting = true;
+
+                self.selectionStartX = self.mouseX;
+                self.selectionStartY = self.mouseY;
+
+                self.selectionRect = self.raphael.rect(self.mouseX, self.mouseY, 1, 1, 2);
+                self.selectionRect.attr({
+                    'stroke': '#f90',
+                    'stroke-dasharray': ['.']
+                });
+            });
+
+            $(document).mousemove(function()
+            {
+                if (self.isSelecting)
+                {
+                    var x = self.selectionStartX;
+                    var y = self.selectionStartY;
+                    var w = self.mouseX - self.selectionStartX;
+                    var h = self.mouseY - self.selectionStartY;
+
+                    if (w < 0)
+                    {
+                        x = x + w;
+                        w = -w;
+                    }
+                    if (h < 0)
+                    {
+                        y = y + h;
+                        h = -h;
+                    }
+
+                    self.selectionRect.attr({x: x, y: y, width: w, height: h});
+                }
+            });
+
+            $(document).mouseup(function(e)
+            {
+                self.isSelecting = false;
+
+                if (self.selectionRect)
+                {
+                    self.selection.selectByRect({
+                        left:   self.selectionRect.attr('x'),
+                        top:    self.selectionRect.attr('y'),
+                        right:  self.selectionRect.attr('x') + self.selectionRect.attr('width'),
+                        bottom: self.selectionRect.attr('y') + self.selectionRect.attr('height')
+                    });
+
+                    self.selectionRect.remove();
+                    self.selectionRect = null;
+                }
+            });
+        };
 
         this.initScrollbarsHandlers = function()
         {
@@ -757,7 +844,7 @@
             self.selectorDlg.on('ok', function()
             {
                 var component = $select.val();
-                var nodeConfig = self.cloneNodeConfig(component);
+                var nodeConfig = self.cloneComponentConfig(component);
                 nodeConfig.x = self.newNodeX;
                 nodeConfig.y = self.newNodeY;
 
@@ -806,13 +893,22 @@
                 throw new Error("Instance of VAX was expected!");
             }
 
-            this.vax = vax;
+            this.vaxRoot = vax;
             this.rootRect = rootRect;
             this.children = [];
             this.$events = $('<div/>');
             this.dragX = null;
             this.dragY = null;
 
+            this.getX = function()
+            {
+                return this.rootRect.attr('x');
+            };
+
+            this.getY = function()
+            {
+                return this.rootRect.attr('y');
+            };
 
             this.addCircle = function(circle)
             {
@@ -857,16 +953,19 @@
                 },
 
                 function (x, y) {
+                    self.vaxRoot.isDragging = true;
                     self.dragX = this.attr('x');
                     self.dragY = this.attr('y');
                     self.trigger('dragstart');
                 },
 
                 function (evt) {
+                    self.vaxRoot.isDragging = false;
+
                     self.dragX = null;
                     self.dragY = null;
 
-                    self.vax.refreshScrollSliders();
+                    self.vaxRoot.refreshScrollSliders();
 
                     self.trigger('dragend');
                 }
@@ -884,12 +983,15 @@
                 return this;
             };
 
-            this.move = function(x, y)
+            this.move = function(x, y, stopEventPropagation)
             {
-                this.rootRect.attr({x: x, y: y});
+                var dx = this.rootRect.attr('x') - x;
+                var dy = this.rootRect.attr('y') - y;
 
-                var rx = this.rootRect.attr('x');
-                var ry = this.rootRect.attr('y');
+                var rx = x;
+                var ry = y;
+
+                this.rootRect.attr({x: x, y: y});
 
                 _.each(this.children, function(child)
                 {
@@ -909,7 +1011,10 @@
                     }
                 });
 
-                this.trigger('drag');
+                if (!stopEventPropagation)
+                {
+                    this.trigger('drag', [x, y, dx, dy]);
+                }
 
                 return this;
             };
@@ -925,6 +1030,93 @@
             };
         };
 
+        function VaxSelection(vax)
+        {
+            var self = this;
+
+            if (!(vax instanceof VAX))
+            {
+                throw new Error("Instance of VAX was expected!");
+            }
+
+            this.vaxRoot = vax;
+            this.nodesIds = [];
+
+            this.getNodesIds = function()
+            {
+                return this.nodesIds;
+            };
+
+            this.clear = function()
+            {
+                var self = this;
+
+                _.each(this.nodesIds, function(nodeId)
+                {
+                    if (nodeId in vaxRoot.nodes)
+                    {
+                        vaxRoot.nodes[nodeId].deselect();
+                    }
+                });
+
+                this.nodes = {};
+            };
+
+            this.testByRect = function(rect)
+            {
+                return _.map(
+                    _.filter(
+                        this.vaxRoot.nodes,
+                        function(node) { return window.vax.doesRectangleContainOther(rect, node.getBoundingBox()); }
+                    ),
+                    function(node) { return node.getId(); }
+                );
+            };
+
+            this.selectByNodeId = function(nodeId)
+            {
+                this.clear();
+                this.nodesIds = [nodeId];
+
+                if (nodeId in vaxRoot.nodes)
+                {
+                    vaxRoot.nodes[nodeId].highlightSelection();
+                }
+            };
+
+            this.hasNodeId = function(nodeId)
+            {
+                return _.contains(this.nodesIds, nodeId);
+            };
+
+            this.selectByRect = function(rect)
+            {
+                this.clear();
+                this.nodesIds = this.testByRect(rect);
+
+                _.each(this.nodesIds, function(nodeId)
+                {
+                    if (nodeId in vaxRoot.nodes)
+                    {
+                        vaxRoot.nodes[nodeId].highlightSelection();
+                    }
+                });
+            };
+
+            this.removeNodes = function()
+            {
+                _.each(this.nodesIds, function(nodeId)
+                {
+                    if (nodeId in vaxRoot.nodes)
+                    {
+                        vaxRoot.nodes[nodeId].remove();
+                    }
+                });
+
+                this.nodesIds = [];
+            };
+        };
+
         function VaxSocket(id, node, nodeIndex, config, kind)
         {
             var self = this;
@@ -935,7 +1127,7 @@
 
             this.id = id;
             this.node = node;
-            this.vax = node.getVAX();
+            this.vaxRoot = node.getVAX();
             this.nodeIndex = nodeIndex;
 
             this.config = _.defaults(config, {
@@ -1334,7 +1526,7 @@
 
             this.id = id;
             this.node = node;
-            this.vax = node.getVAX();
+            this.vaxRoot = node.getVAX();
             this.nodeIndex = nodeIndex;
             this.config = _.defaults(config, {
                 color: "#fff",
@@ -1409,7 +1601,7 @@
                 }
 
                 var $body = $('<input type="text"/>').val(self.value);
-                self.pickerDlg = self.vax.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+                self.pickerDlg = self.vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
                 self.pickerDlg.show();
 
                 self.pickerDlg.on('ok', function()
@@ -1527,7 +1719,6 @@
 
                 return dimensions;
             };
-
 
             this.init = function ()
             {
@@ -1652,14 +1843,64 @@
                 // refresh scrollbars sliders
                 vaxRoot.refreshScrollSliders();
 
-                // remove on 2x click
+                // remove selection on 2x click
                 self.moveContainer.dblclick(function()
                 {
-                    if (confirm('Вы действительно хотите удалить выделенный узел ' + self.config.component + '?'))
+                    if (confirm('Вы действительно хотите удалить выделенные узлы?'))
                     {
-                        self.remove();
+                        self.getVAX().selection.removeNodes();
                     }
-                })
+                });
+
+                // dragging group handlers
+                self.draggingGroup.on('dragstart', function()
+                {
+                    self.draggingGroupsOffsets = {};
+
+                    var selection = self.getVAX().selection;
+
+                    if (!selection.hasNodeId(self.id))
+                    {
+                        selection.selectByNodeId(self.id);
+                    }
+                    else
+                    {
+                        // drag other groups accordingly
+                        _.each(selection.getNodesIds(), function(nodeId)
+                        {
+                            if (nodeId == self.id)
+                            {
+                                return;
+                            }
+
+                            var node = self.getVAX().nodes[nodeId];
+                            if (node)
+                            {
+                                self.draggingGroupsOffsets[nodeId] = {
+                                    dx: node.draggingGroup.getX() - self.draggingGroup.getX(),
+                                    dy: node.draggingGroup.getY() - self.draggingGroup.getY(),
+                                };
+                            }
+                        });
+                    }
+                });
+
+                self.draggingGroup.on('drag', function(evt, x, y)
+                {
+                    _.each(self.draggingGroupsOffsets, function(offset, nodeId)
+                    {
+                        var node = self.getVAX().nodes[nodeId];
+                        if (node)
+                        {
+                            node.draggingGroup.move(x + offset.dx, y + offset.dy, false);
+                        }
+                    });
+                });
+
+                self.draggingGroup.on('dragend', function()
+                {
+                    self.draggingGroupsOffsets = {};
+                });
             };
 
             this.getDraggingGroup = function()
@@ -1735,6 +1976,24 @@
             this.move = function(nx, ny)
             {
                 this.getDraggingGroup().move(nx, ny);
+            };
+            
+            this.highlightSelection = function()
+            {
+                this.bgRect.attr({
+                    'stroke': '#fa0',
+                    'stroke-width': 3,
+                    'opacity': .7
+                });
+            };
+
+            this.deselect = function()
+            {
+                this.bgRect.attr({
+                    'stroke': '#000',
+                    'stroke-width': 1,
+                    'opacity': .5
+                });
             };
 
             this.getX = function () {
@@ -1845,13 +2104,13 @@
                 var s1 = vaxRoot.sockets[self.inputSocketId];
                 var s2 = vaxRoot.sockets[self.outputSocketId];
 
-                self.path = raphael.path(vax.buildWirePath(s2.getCX(), s2.getCY(), s1.getCX(), s1.getCY()));
+                self.path = raphael.path(vax.buildWirePath(s1.getCX(), s1.getCY(), s2.getCX(), s2.getCY()));
                 self.path.toBack();
                 self.path.attr({
                     'stroke': s2.config.color, // color of output socket
                     'stroke-width': 3,
                     'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId,
-                    'arrow-end': 'classic-narrow-long',
+                    'arrow-start': 'classic-narrow-long',
                 });
 
                 self.path.dblclick(function()
@@ -2023,7 +2282,7 @@
                 _.each(graph.nodes, function(nodePickle)
                 {
                     // TODO: handle errors
-                    var nodeConfig = self.cloneNodeConfig(nodePickle.c);
+                    var nodeConfig = self.cloneComponentConfig(nodePickle.c);
 
                     // fill in type instances
                     if (nodePickle.t)
