@@ -396,7 +396,7 @@
             $(document).keyup(function (evt) { // should be a DOM node for that
                 if (evt.which == 88) // X key
                 {
-                    self.showSelector();
+                    self.showComponentSelector();
                 }
             });
 
@@ -493,7 +493,11 @@
 
         this.getBoundingBox = function()
         {
+            var self = this;
+
             var nodesBoxes = _.map(this.nodes, function(node) { return node.getBoundingBox(); });
+
+            nodesBoxes.push({left: 0, top: 0, right: self.canvasWidth, bottom: self.canvasHeight});
 
             return {
                 left:   _.min( _.map(nodesBoxes, function(box) { return box.left }) ),
@@ -594,7 +598,7 @@
             this.refreshScrollSliders();
         };
 
-        this.showSelector = function()
+        this.showComponentSelector = function()
         {
             var self = this;
 
@@ -785,6 +789,130 @@
             return newNode;
         };
 
+        this.createDraggingGroup = function(rootRect)
+        {
+            return new VaxDraggingGroup(this, rootRect);
+        };
+
+        function VaxDraggingGroup(vax, rootRect)
+        {
+            var self = this;
+
+            if (!(vax instanceof VAX))
+            {
+                throw new Error("Instance of VAX was expected!");
+            }
+
+            this.vax = vax;
+            this.rootRect = rootRect;
+            this.children = [];
+            this.$events = $('<div/>');
+            this.dragX = null;
+            this.dragY = null;
+
+
+            this.addCircle = function(circle)
+            {
+                this.children.push({
+                    type:'circle',
+                    shape: circle,
+                    dx: this.rootRect.attr('x') - circle.attr('cx'),
+                    dy: this.rootRect.attr('y') - circle.attr('cy')
+                });
+
+                return this;
+            };
+
+            this.addText = function(text)
+            {
+                this.children.push({
+                    type: 'text',
+                    shape: text,
+                    dx: this.rootRect.attr('x') - text.attr('x'),
+                    dy: this.rootRect.attr('y') - text.attr('y')
+                });
+
+                return this;
+            };
+
+            this.addRect = function(rect)
+            {
+                this.children.push({
+                    type: 'rect',
+                    shape: rect,
+                    dx: this.rootRect.attr('x') - rect.attr('x'),
+                    dy: this.rootRect.attr('y') - rect.attr('y')
+                });
+
+                return this;
+            };
+
+            this.rootRect.drag(
+                function (dx, dy, nx, ny)
+                {
+                    self.move(self.dragX + dx, self.dragY + dy);
+                },
+
+                function (x, y) {
+                    self.dragX = this.attr('x');
+                    self.dragY = this.attr('y');
+                    self.trigger('dragstart');
+                },
+
+                function (evt) {
+                    self.dragX = null;
+                    self.dragY = null;
+
+                    self.vax.refreshScrollSliders();
+
+                    self.trigger('dragend');
+                }
+            );
+
+            this.on = function(evt, handler)
+            {
+                this.$events.on(evt, handler);
+                return this;
+            };
+
+            this.trigger = function(evt, params)
+            {
+                this.$events.trigger(evt, params);
+                return this;
+            };
+
+            this.move = function(x, y)
+            {
+                this.rootRect.attr({x: x, y: y});
+
+                var rx = this.rootRect.attr('x');
+                var ry = this.rootRect.attr('y');
+
+                _.each(this.children, function(child)
+                {
+                    if (child.type == 'circle')
+                    {
+                        child.shape.attr({
+                            cx: rx - child.dx,
+                            cy: ry - child.dy
+                        });
+                    }
+                    else
+                    {
+                        child.shape.attr({
+                            x: rx - child.dx,
+                            y: ry - child.dy
+                        });
+                    }
+                });
+
+                this.trigger('drag');
+
+                return this;
+            };
+        };
+
+
         function VaxSocket(id, node, nodeIndex, config, kind)
         {
             var self = this;
@@ -817,6 +945,8 @@
                     ? raphael.circle(nodeX, nodeY + (self.nodeIndex + 1) * 20 + 30, 5)
                     : raphael.circle(nodeX + self.node.getWidth(), nodeY + self.node.getHeight() - (self.nodeIndex + 1) * 20, 5);
 
+                self.node.getDraggingGroup().addCircle(circle);
+
                 return circle;
             };
 
@@ -841,9 +971,13 @@
                     "font-family": "Tahoma",
                     "font-size": "10pt",
                 });
+
+                self.node.getDraggingGroup().addText(self.caption);
             };
 
-            this.init = function () {
+            this.init = function ()
+            {
+                // init shapes
                 self.circle = self.createCircle();
                 self.circle.toFront();
                 self.circle.attr({
@@ -860,6 +994,7 @@
 
                 self.createCaption();
 
+                // init drag handlers
                 self.circle.drag(
                     function (dx, dy, nx, ny)
                     {
@@ -923,45 +1058,15 @@
                     }
                 );
 
+                // dragging group move handler
+                self.node.getDraggingGroup().on('drag', function()
+                {
+                    self.refreshWires();
+                });
             };
 
-            this.updatePos = function (nx, ny) {
-
-                // circle
-                if (self.isInput())
-                {
-                    self.circle.attr({
-                        cx: nx,
-                        cy: ny + (self.nodeIndex + 1) * 20 + 30
-                    });
-                }
-                else
-                {
-                    self.circle.attr({
-                        cx: nx + self.node.getWidth(),
-                        cy: ny + self.node.getHeight() - (self.nodeIndex + 1) * 20
-                    });
-                }
-
-                // caption
-                var cx = self.circle.attr("cx");
-                var cy = self.circle.attr("cy");
-
-                if (self.isInput())
-                {
-                    self.caption.attr({
-                        x: cx + 10,
-                        y: cy
-                    });
-                }
-                else
-                {
-                    self.caption.attr({
-                        x: cx - 10,
-                        y: cy
-                    })
-                }
-
+            this.refreshWires = function ()
+            {
                 // wires
                 for (var k in self.wires)
                 {
@@ -1141,23 +1246,15 @@
                 self.trigger(action);
             });
 
-            this.trigger = function(evt)
+            this.on = function(evt, handler)
             {
-                var self = this;
-                if (this.handlers[evt])
-                {
-                    _.each(self.handlers[evt], function(fn) { fn(); });
-                }
+                this.$dlg.on(evt, handler);
+                return this;
             };
 
-            this.on = function(action, fn)
+            this.trigger = function(evt, params)
             {
-                if (!this.handlers[action])
-                {
-                    this.handlers[action] = [];
-                }
-
-                this.handlers[action].push(fn);
+                this.$dlg.trigger(evt, params);
                 return this;
             };
 
@@ -1226,6 +1323,8 @@
                     "font-size": "12pt",
                     "text-anchor": "start"
                 });
+
+                this.node.getDraggingGroup().addText(self.caption);
             };
 
             this.createValueHolder = function()
@@ -1253,25 +1352,14 @@
                     self.value = newValue;
                     self.valueHolder.attr("text", newValue);
                 });
+
+                this.node.getDraggingGroup().addText(self.valueHolder);
             };
 
             this.init = function () {
 
                 self.createCaption();
                 self.createValueHolder();
-            };
-
-            this.updatePos = function (nx, ny)
-            {
-                self.caption.attr({
-                    x: nx + 8,
-                    y: ny + self.node.getInputSocketsCount() * 20 + (self.nodeIndex + 1) * 25 + 25
-                });
-
-                self.valueHolder.attr({
-                    x: nx + 8,
-                    y: ny + self.node.getInputSocketsCount() * 20 + (self.nodeIndex + 1) * 25 + 40
-                });
             };
 
             this.init();
@@ -1284,6 +1372,7 @@
             this.attributes = {};
             this.inputSockets = {};
             this.outputSockets = {};
+            this.draggingGroup = null;
 
             this.config = _.defaults(config, {
                 title: "Node",
@@ -1365,6 +1454,9 @@
                     cursor: 'move'
                 });
 
+                // create dragging group
+                self.draggingGroup = vaxRoot.createDraggingGroup(self.moveContainer);
+                self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2).addText(self.caption);
 
                 // input sockets
                 for (var i = 0; i < self.config.inputSockets.length; ++i) {
@@ -1375,15 +1467,15 @@
                 }
 
                 // attributes
-                for (var i = 0; i < self.config.attributes.length; ++i) {
+                for (i = 0; i < self.config.attributes.length; ++i) {
                     var attrId = this.id + "-Attribute-" + vax.genNextId();
-                    var attr = new VaxAttribute(attrId, self, i, self.config.attributes[i]);
+                    attr = new VaxAttribute(attrId, self, i, self.config.attributes[i]);
                     self.attributes[attrId] = attr;
                 }
 
                 // output sockets
                 for (var j = 0; j < self.config.outputSockets.length; ++j) {
-                    var socketId = this.id + "-OutputSocket-" + vax.genNextId();
+                    socketId = this.id + "-OutputSocket-" + vax.genNextId();
                     var outputSocket = new VaxSocket(socketId, self, j, self.config.outputSockets[j], 'output');
                     self.outputSockets[socketId] = outputSocket;
                     vaxRoot.sockets[socketId] = outputSocket;
@@ -1391,27 +1483,6 @@
 
                 // refresh scrollbars sliders
                 vaxRoot.refreshScrollSliders();
-
-                // moveContainer drag
-                self.moveContainer.drag(
-                    function (dx, dy, nx, ny)
-                    {
-                        self.move(this.dragX + dx, this.dragY + dy)
-
-                    },
-
-                    function (x, y) {
-                        this.dragX = this.attr('x');
-                        this.dragY = this.attr('y');
-                    },
-
-                    function (evt) {
-                        this.dragX = null;
-                        this.dragY = null;
-
-                        vaxRoot.refreshScrollSliders();
-                    }
-                );
 
                 // remove on 2x click
                 self.moveContainer.dblclick(function()
@@ -1421,6 +1492,11 @@
                         self.remove();
                     }
                 })
+            };
+
+            this.getDraggingGroup = function()
+            {
+                return this.draggingGroup;
             };
 
             // bounding box {left,right,top,bottom)
@@ -1504,50 +1580,7 @@
 
             this.move = function(nx, ny)
             {
-                var newPos = {x: nx , y: ny};
-                self.moveContainer.attr(newPos);
-
-                self.bgRect.attr(newPos);
-                self.captionRect.attr(newPos);
-
-
-                self.captionRect2.attr({
-                    x: newPos.x,
-                    y: newPos.y + 10
-                });
-
-
-                self.caption.attr({
-                    x: newPos.x + 10,
-                    y: newPos.y + 15
-                });
-
-                // move input sockets
-                for (var k in self.inputSockets)
-                {
-                    if (self.inputSockets.hasOwnProperty(k))
-                    {
-                        self.inputSockets[k].updatePos(newPos.x, newPos.y);
-                    }
-                }
-
-                // move attributes
-                for (k in self.attributes)
-                {
-                    if (self.attributes.hasOwnProperty(k))
-                    {
-                        self.attributes[k].updatePos(newPos.x, newPos.y);
-                    }
-                }
-
-                // move output sockets
-                for (k in self.outputSockets)
-                {
-                    if (self.outputSockets.hasOwnProperty(k))
-                    {
-                        self.outputSockets[k].updatePos(newPos.x, newPos.y);
-                    }
-                }
+                this.getDraggingGroup().move(nx, ny);
             };
 
             this.getX = function () {
@@ -1740,12 +1773,12 @@
 
                 // return node data
                 return {
-                    id: vaxNode.id,
-                    component: vaxNode.config.component,
-                    attrs: nodeAttrs,
+                    id: vaxNode.getCompactId(),
+                    c: vaxNode.config.component,
+                    a: nodeAttrs,
                     links: links,
                     out: out,
-                    typeInstances: vaxNode.config.typeInstances
+                    ti: vaxNode.config.typeInstances
                 };
 
             };
@@ -1753,7 +1786,12 @@
             return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
         };
 
-        this.saveBlueprint = function()
+        this.serializeTrees = function()
+        {
+            return JSON.string(this.composeTrees());
+        };
+
+        this.saveGraph = function()
         {
             var self = this;
 
@@ -1802,12 +1840,12 @@
             };
         };
 
-        this.serializeBlueprint = function()
+        this.serializeGraph = function()
         {
-            return JSON.stringify(this.saveBlueprint());
+            return JSON.stringify(this.saveGraph());
         };
 
-        this.clearBlueprint = function()
+        this.clear = function()
         {
             _.each(this.nodes, function(node)
             {
@@ -1815,19 +1853,19 @@
             });
         };
 
-        this.loadBlueprint = function(blueprint)
+        this.loadGraph = function(graph)
         {
             var self = this;
 
             // clear itself
-            self.clearBlueprint();
+            self.clear();
 
             // pickledId -> realId nodes mapping
             var nodesIdsMap = {};
 
-            if (blueprint.nodes)
+            if (graph.nodes)
             {
-                _.each(blueprint.nodes, function(nodePickle)
+                _.each(graph.nodes, function(nodePickle)
                 {
                     // TODO: handle errors
                     var nodeConfig = self.cloneNodeConfig(nodePickle.c);
@@ -1871,9 +1909,9 @@
             }
 
             // wire 'em
-            if (blueprint.wires)
+            if (graph.wires)
             {
-                _.each(blueprint.wires, function(wirePickle)
+                _.each(graph.wires, function(wirePickle)
                 {
                     var outputNodeId = nodesIdsMap[wirePickle[0]];
                     var outputSocketName = wirePickle[1];
