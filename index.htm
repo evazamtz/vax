@@ -19,19 +19,9 @@
     }
     #eval {
         position: absolute;
-        top: 120px;
-        left: 1130px;
+        top: 10px;
+        right: 10px;
         z-index: 1000;
-    }
-    .help {
-        position: absolute;
-        top: 30px;
-        left: 1100px;
-        color: white;
-        font-family: "Georgia";
-        font-variant: small-caps;
-        font-weight: bold;
-        font-size: 14pt;
     }
 </style>
 <div id="vax-test" style="width: 1800px; height: 950px;"></div>
@@ -43,9 +33,9 @@
         <li>Double click a node caption or a wire to remove it</li>
     </ul>
 </div>
+-->
 
 <button id="eval" type="button">Eval!</button>
--->
 
 
 <script type="text/javascript">
@@ -53,7 +43,9 @@
     {
         window.myVAX = new VAX('vax-test', {schema: vaxSchema});
 
-        window.bp = {"version":"0.1","nodes":[{"id":2,"c":"Select","x":1295,"y":213,"a":{"Alias":""}},{"id":15,"c":"OrderBy","x":997,"y":557,"a":{"D":"ASC"}},{"id":25,"c":"Eq","x":1038,"y":363},{"id":34,"c":"CustomSql","x":802,"y":337,"t":{"T":"TextExpr"},"a":{"SQL":"admin"}},{"id":37,"c":"Result","x":1458,"y":321},{"id":50,"c":"Table_User","x":301,"y":226,"a":{"Alias":"u"}},{"id":53,"c":"Col_User_Email","x":548,"y":120,"a":{"Alias":"email"}},{"id":57,"c":"GatherColumns","x":842,"y":81},{"id":65,"c":"Col_User_CreatedAt","x":535,"y":391,"a":{"Alias":"created_at"}}],"wires":[[15,"O",2,"ORDER"],[25,"O",2,"WHERE"],[2,"O",37,"S"],[53,"O",57,"A"],[65,"O",57,"B"],[50,"O",53,"T"],[50,"O",65,"T"],[34,"O",25,"A"],[65,"O",25,"B"],[65,"O",15,"E"],[57,"O",2,"Cols"],[50,"O",2,"FROM"]]};
+        window.bp = {"version":"0.1","nodes":[{"id":2,"c":"Tbl_Order","x":374,"y":260,"a":{"Alias":"o"}},{"id":5,"c":"Tbl_Customer","x":376,"y":427,"a":{"Alias":"ct"}},{"id":8,"c":"Tbl_LegalEntity","x":575,"y":568,"a":{"Alias":"le"}},{"id":11,"c":"SmartJoin","x":808,"y":493,"a":{"Type":"INNER"}},{"id":18,"c":"SmartJoin","x":603,"y":315,"a":{"Type":"INNER"}},{"id":25,"c":"Col_Order_DeliveryStatus","x":784,"y":11,"a":{"Alias":"delivery_status"}},{"id":29,"c":"CountAsteriks","x":989,"y":-10,"a":{"Alias":"cnt"}},{"id":32,"c":"Result","x":1702,"y":395},{"id":34,"c":"Select","x":1515,"y":241,"a":{"Alias":""}},{"id":43,"c":"GroupBy","x":1093,"y":205},{"id":47,"c":"GatherColumns","x":1271,"y":-20},{"id":55,"c":"LegalEntity_FullName","x":797,"y":151,"a":{"Alias":"le_fullname"}},{"id":59,"c":"Param","x":1191.6371532060002,"y":674.0432629600473,"t":{"T":"IdExpr"},"a":{"title":"CTID"}},{"id":62,"c":"CustomSql","x":1188.6371532060002,"y":546.0432629600473,"t":{"T":"IdExpr"},"a":{"SQL":"o.customer_id"}},{"id":65,"c":"TypedEq","x":1336.6371532060002,"y":498.0432629600473,"t":{"T":"IdExpr"}}],"wires":[[2,"O",18,"L"],[5,"O",18,"R"],[8,"O",11,"R"],[2,"O",25,"T"],[34,"O",32,"S"],[43,"O",34,"GROUP"],[11,"O",34,"FROM"],[47,"O",34,"Cols"],[8,"O",55,"T"],[65,"O",34,"WHERE"],[62,"O",65,"A"],[59,"O",65,"B"],[25,"O",43,"E"],[55,"O",43,"Prev"],[29,"O",47,"A"],[43,"O",47,"Prev"],[18,"O",11,"Prev"],[5,"O",11,"L"],[2,"O",18,"Prev"]]};
+
+
 
         myVAX.loadGraph(bp);
 
@@ -69,19 +61,19 @@
 
             var root = trees[0];
 
-            if (root.component !== "Result")
+            if (root.c !== "Result")
             {
                 return alert("Root node should be 'Result'!");
             }
 
-            var walk = function walk(node)
+            var walkCalc = function walk(node)
             {
                 if (!node)
                 {
-                    return 0;
+                    return '';
                 }
 
-                switch (node.component)
+                switch (node.c)
                 {
                     case 'Result':
                         return 'Result = ' + walk(node.links.I);
@@ -99,14 +91,117 @@
                         return walk(node.links.A) / walk(node.links.B);
 
                     case 'Constant':
-                        return parseInt(node.attrs.V);
+                        return parseInt(node.a.V);
 
                     default:
                         throw new Error("Unsupported node component: " + node.component);
                 }
             };
 
-            var res = walk(root);
+            var walkSql = function walkSql(node)
+            {
+                if (!node)
+                {
+                    return '';
+                }
+
+                switch (node.c)
+                {
+                    case 'Result':
+                        return walkSql(node.links.S);
+
+                    case 'Select':
+                        var cols     = walkSql(node.links.Cols);
+                        var from     = walkSql(node.links.FROM);
+                        var where    = walkSql(node.links.WHERE);
+                        var order    = walkSql(node.links.ORDER);
+                        var grouping = walkSql(node.links.GROUP);
+                        var having   = walkSql(node.links.HAVING);
+
+                        var sql = ' SELECT ' + cols;
+                        if (from)
+                        {
+                            sql = sql + '\n FROM ' + from;
+                        }
+
+                        if (where)
+                        {
+                            sql = sql + '\n WHERE ' + where;
+                        }
+
+                        if (order)
+                        {
+                            sql = sql + '\n ORDER BY ' + order;
+                        }
+
+                        if (grouping)
+                        {
+                            sql = sql + '\n GROUP BY ' + grouping;
+                        }
+
+                        if (having)
+                        {
+                            sql = sql + '\n HAVING ' + having;
+                        }
+
+                        return sql;
+                        break;
+
+                    case 'Tbl_Order':
+                        return 'tbl_order AS ' + node.a.Alias;
+
+                    case 'Tbl_Customer':
+                        return 'tbl_customer AS ' + node.a.Alias;
+
+                    case 'Tbl_LegalEntity':
+                        return 'tbl_legal_entity AS ' + node.a.Alias;
+
+                    case 'SmartJoin':
+                        var l = node.links.L.c;
+                        var r = node.links.R.c;
+
+                        var onMap = {
+                            'Tbl_Order.Tbl_Customer': 'o.customer_id = ct.id',
+                            'Tbl_Customer.Tbl_LegalEntity': 'le.id = ct.legal_entity_id',
+                        };
+
+                        return walkSql(node.links.Prev) + '\n ' + node.a.Type + ' JOIN ' + walkSql(node.links.R) + ' ON ' + onMap[l + '.' + r];
+
+
+                    case 'GroupBy':
+                        var exprs = _.filter([walkSql(node.links.E), walkSql(node.links.Prev)]);
+                        return exprs.join(', ');
+
+                    case 'GatherColumns':
+                        var exprs = _.filter([walkSql(node.links.A), walkSql(node.links.B), walkSql(node.links.C),walkSql(node.links.D), walkSql(node.links.E), walkSql(node.links.Prev)]);
+                        return exprs.join(', ');
+
+                    case 'Col_Order_DeliveryStatus':
+                        return 'o.delivery_status';
+
+                    case 'LegalEntity_FullName':
+                        return " le.inn || le.form_of_institution || ' ' || le.name";
+
+                    case 'TypedEq':
+                    case 'Eq':
+                        return ' ' + walkSql(node.links.A) + ' = ' + walkSql(node.links.B) + ' ';
+
+                    case 'CustomSql':
+                        return node.a.SQL;
+
+                    case 'CountAsteriks':
+                        return ' COUNT(*) AS ' + node.a.Alias + ' ';
+
+                    case 'Param':
+                        return ' $$' + node.a.title + '$$ ';
+
+
+                    default:
+                        return ''; // throw new Error("Unsupported node component: " + node.component);
+                }
+            };
+
+            var res = walkSql(root);
 
             alert(res);
         });
