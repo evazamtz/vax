@@ -2223,6 +2223,14 @@
                     'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId,
                     'arrow-start': 'classic-narrow-long',
                 });
+
+                self.path.dblclick(function()
+                {
+                    self.path.animate({'opacity': 0}, 200, '<', function()
+                    {
+                        self.remove();
+                    });
+                });
             };
 
             this.remove = function()
