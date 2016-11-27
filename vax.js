@@ -760,6 +760,12 @@
                 }
 
                 var $option = $('<option/>').attr('value', name).text(title);
+
+                if (self.lastSelectedComponent && self.lastSelectedComponent == name)
+                {
+                    $option.attr('selected', 'selected');
+                }
+
                 $select.append($option);
             });
 
@@ -909,6 +915,8 @@
 
                 self.selectorDlg.destroy();
                 delete self.selectorDlg;
+
+                self.lastSelectedComponent = component;
             });
 
             self.selectorDlg.on('cancel', function()
