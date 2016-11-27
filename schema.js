@@ -1,126 +1,150 @@
 var vaxSchema = {
+  "colors": {
+    "relation": "#cf3",
+    "exprs": "#aaa",
+    "expr": "#fff",
+    "boolean": "#ff0"
+  },
   "types": {
     "Relation": {
-      "color": "#fff"
+      "color": "@relation"
     },
     "Exprs": {
-      "color": "#ff0"
+      "color": "@exprs"
     },
     "Expr": {
-      "color": "#ff0",
+      "color": "@expr",
       "extends": [
         "Exprs"
       ]
     },
     "BooleanExpr": {
-      "color": "#ff0",
+      "color": "@boolean",
       "extends": "Expr"
     },
     "NumericExpr": {
-      "color": "#ff0",
+      "color": "@expr",
       "extends": "Expr"
     },
     "IdExpr": {
-      "color": "#ff0",
+      "color": "@expr",
       "extends": "NumericExpr"
     },
     "TextExpr": {
-      "color": "#ff0",
+      "color": "@expr",
       "extends": "Expr"
     },
     "TimestampExpr": {
+      "color": "@expr",
       "extends": "Expr"
     },
     "Table": {
-      "extends": "Relation",
-      "color": "#f00"
+      "color": "@relation",
+      "extends": "Relation"
     },
     "Join": {
       "extends": "Table",
-      "color": "#f00"
+      "color": "@relation"
     },
     "ColumnRef": {
       "extends": "Expr",
-      "color": "#fff"
+      "color": "@expr"
     },
     "TextColumnRef": {
       "extends": [
         "ColumnRef",
         "TextExpr"
-      ]
+      ],
+      "color": "@expr"
     },
     "NumericColumnRef": {
       "extends": [
         "ColumnRef",
         "NumericExpr"
-      ]
+      ],
+      "color": "@expr"
     },
     "IdColumnRef": {
       "extends": [
         "NumericColumnRef",
         "IdExpr"
-      ]
+      ],
+      "color": "@expr"
     },
     "TimestampColumnRef": {
       "extends": [
         "ColumnRef",
         "TimestampExpr"
-      ]
+      ],
+      "color": "@expr"
     },
     "Column": {
       "extends": "ColumnRef",
-      "color": "#fff"
+      "color": "@expr"
     },
     "TextColumn": {
       "extends": [
         "Column",
         "TextColumnRef"
-      ]
+      ],
+      "color": "@expr"
     },
     "NumericColumn": {
       "extends": [
         "Column",
         "NumericColumnRef"
-      ]
+      ],
+      "color": "@expr"
     },
     "IdColumn": {
       "extends": [
         "Column",
         "IdColumnRef"
-      ]
+      ],
+      "color": "@expr"
     },
     "TimestampColumn": {
       "extends": [
         "Column",
         "TimestampColumnRef"
-      ]
+      ],
+      "color": "@expr"
     },
     "Columns": {
-      "color": "#f0f"
+      "color": "@exprs",
+      "extends": [
+        "Exprs"
+      ]
     },
     "Select": {
       "extends": "Relation",
-      "color": "#00f"
+      "color": "@relation"
     },
     "CTE": {
       "extends": "Select",
-      "color": "#00f"
+      "color": "@relation"
     },
     "Identifier": {
       "color": "#0ff"
     },
-    "OrderColumns": null,
+    "OrderColumns": {
+      "color": "@exprs"
+    },
     "OrderColumn": {
-      "extends": "OrderColumns"
+      "extends": "OrderColumns",
+      "color": "@expr"
     },
     "Tbl_Order": {
-      "extends": "Table"
+      "extends": "Table",
+      "color": "@relation"
     },
     "Tbl_Customer": {
-      "extends": "Table"
+      "extends": "Table",
+      "color": "@relation"
     },
     "Tbl_LegalEntity": {
-      "extends": "Table"
+      "extends": "Table",
+      "color": "@relation"
     }
   },
   "components": {

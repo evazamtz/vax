@@ -208,6 +208,33 @@
             }
         };
 
+        this.buildSchemaColors = function(schema)
+        {
+            return schema.colors || {};
+        };
+
+        this.getColorByAlias = function(alias)
+        {
+            if (!(alias in this.schema.colors))
+            {
+                throw new Error("Color alias: " + alias + " wasn't found!");
+            }
+
+            return this.schema.colors[alias];
+        };
+
+
+        this.resolveColor = function(color)
+        {
+            color = color || '#fff';
+            if (color.substr(0, 1) == '@')
+            {
+                color = this.getColorByAlias(color.substr(1));
+            }
+
+            return color;
+        };
+
         this.buildSchemaTypes = function(schema)
         {
             var self = this;
@@ -263,8 +290,9 @@
                     throw new Error("Type params should a plain array with length > 0!");
                 }
 
+
                 types[name] = {
-                    color: type.color || "#fff",
+                    color: self.resolveColor(type.color),
                     extends: _.filter(_.unique(allExtends, false)),
                     typeParams: type.typeParams || [],
                 };
@@ -275,6 +303,8 @@
 
         this.buildSchemaComponents = function(schema)
         {
+            var self = this;
+
             var componentsConfig = schema.components || {};
 
             var components = {};
@@ -291,6 +321,8 @@
                     outputSockets: [],
                     typeInstances: {}
                 });
+
+                component.color = self.resolveColor(component.color);
 
                 var mapSubConfig = function(subConfig, name)
                 {
@@ -395,7 +427,8 @@
             return type.color;
         };
 
-        this.schema.types = this.buildSchemaTypes(this.config.schema);
+        this.schema.colors     = this.buildSchemaColors(this.config.schema);
+        this.schema.types      = this.buildSchemaTypes(this.config.schema);
         this.schema.components = this.buildSchemaComponents(this.config.schema, this.schema.types);
 
         this.nodes = {};

@@ -1,73 +1,94 @@
+colors:
+  relation: "#cf3"
+  exprs: "#aaa"
+  expr: "#fff"
+  boolean: "#ff0"
+
 types:
   # [Any] type is considered as super type
   Relation:
-    color: "#fff"
+    color: @relation
   Exprs:
-    color: "#ff0"
+    color: @exprs
   Expr:
-    color: "#ff0"
+    color: @expr
     extends: [Exprs]
   BooleanExpr:
-    color: "#ff0"
+    color: @boolean
     extends: Expr
   NumericExpr:
-    color: "#ff0"
+    color: @expr
     extends: Expr
   IdExpr:
-    color: "#ff0"
+    color: @expr
     extends: NumericExpr
   TextExpr:
-    color: "#ff0"
+    color: @expr
     extends: Expr
   TimestampExpr:
+    color: @expr
     extends: Expr
   Table:
+    color: @relation
     extends: Relation
-    color: "#f00"
   Join:
     extends: Table
-    color: "#f00"
+    color: @relation
   ColumnRef:
     extends: Expr
-    color: "#fff"
+    color: @expr
   TextColumnRef:
     extends: [ColumnRef, TextExpr]
+    color: @expr
   NumericColumnRef:
     extends: [ColumnRef, NumericExpr]
+    color: @expr
   IdColumnRef:
     extends: [NumericColumnRef, IdExpr]
+    color: @expr
   TimestampColumnRef:
-      extends: [ColumnRef, TimestampExpr]
+    extends: [ColumnRef, TimestampExpr]
+    color: @expr
   Column:
     extends: ColumnRef
-    color: "#fff"
+    color: @expr
   TextColumn:
     extends: [Column, TextColumnRef]
+    color: @expr
   NumericColumn:
     extends: [Column, NumericColumnRef]
+    color: @expr
   IdColumn:
     extends: [Column, IdColumnRef]
+    color: @expr
   TimestampColumn:
     extends: [Column, TimestampColumnRef]
+    color: @expr
   Columns:
-    color: "#f0f"
+    color: @exprs
+    extends: [Exprs]
   Select:
     extends: Relation
-    color: "#00f"
+    color: @relation
   CTE:
     extends: Select
-    color: "#00f"
+    color: @relation
   Identifier:
     color: "#0ff"
   OrderColumns:
+    color: @exprs
   OrderColumn:
     extends: OrderColumns
+    color: @expr
   Tbl_Order:
     extends: Table
+    color: @relation
   Tbl_Customer:
     extends: Table
+    color: @relation
   Tbl_LegalEntity:
     extends: Table
+    color: @relation
 
 components:
   Tbl_Order:
