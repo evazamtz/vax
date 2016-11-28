@@ -146,6 +146,9 @@
         // the selection
         this.selection = new VaxSelection(this);
 
+        // operations history
+        this.history = new VaxHistory(this);
+
         // default config
         this.config = _.defaults(config, {
             schema: {
@@ -481,6 +484,11 @@
                 if (evt.keyCode == 46 || evt.keyCode == 8) // Delete
                 {
                     self.selection.removeSelectedElements();
+                }
+
+                if (evt.keyCode == 90 && evt.ctrlKey) // Ctrl+Z
+                {
+                    self.history.undo();
                 }
             });
 
@@ -950,6 +958,9 @@
                 delete self.selectorDlg;
 
                 self.lastSelectedComponent = component;
+
+                // push action into history
+                this.vaxRoot.history.pushAction('createdANode');
             });
 
             self.selectorDlg.on('cancel', function()
@@ -1258,6 +1269,50 @@
 
                     this.wiresIds = [];
                 }
+
+                // push action into history
+                this.vaxRoot.history.pushAction('removedElements');
+            };
+        };
+
+        /*
+         * TODO:
+         * We just save full graph each time and restore it if needed, which is not really effective.
+         * But hey, it's so easy to implement and it works!
+         *
+         * Real implementation ofc should be defining undo/redo code for each type of operation
+         */
+        function VaxHistory(vax)
+        {
+            var self = this;
+
+            if (!(vax instanceof VAX)) {
+                throw new Error("Instance of VAX was expected!");
+            }
+
+            this.vaxRoot = vax;
+            this.stack = [];
+            this.MAX_SIZE = 20;
+
+            this.pushAction = function(action)
+            {
+                this.stack.push(this.vaxRoot.saveGraph());
+
+                if (this.stack.length > this.MAX_SIZE)
+                {
+                    this.stack.shift();
+                }
+            };
+
+            this.undo = function()
+            {
+                if (this.stack.length > 1)
+                {
+                    var prevGraph = this.stack[this.stack.length - 2];
+                    this.vaxRoot.loadGraph(prevGraph);
+                    this.vaxRoot.selection.clear();
+                    this.stack.pop();
+                }
             };
         };
 
@@ -1420,6 +1475,9 @@
                                         if (vaxRoot.areParsedTypesCompatible(inputParsedType, outputParsedType))
                                         {
                                             vaxRoot.wire(self.id, targetSocket.data("socketId"));
+
+                                            // push action into history
+                                            this.vaxRoot.history.pushAction('wired2Sockets');
                                         }
                                     }
                                 }
@@ -2046,6 +2104,9 @@
                 self.draggingGroup.on('dragend', function()
                 {
                     self.draggingGroupsOffsets = {};
+
+                    // push action into history
+                    self.getVAX().history.pushAction('movedNode');
                 });
             };
 
