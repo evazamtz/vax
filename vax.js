@@ -135,10 +135,15 @@
 
         // setting states of down-move-up operations
         this.isDragging  = false;
-        this.isWiring = false;
+        this.isWiring    = false;
         this.isSelecting = false;
         this.isPanning   = false;
+
+        // system keys positions
         this.isSpacebarDown = false;
+        this.isCtrlDown     = false;
+        this.isAltDown      = false;
+        this.isShiftDown    = false;
 
         // selection rectangle
         this.selectionRect = null;
@@ -148,6 +153,9 @@
 
         // operations history
         this.history = new VaxHistory(this);
+
+        // clipboard
+        this.clipboard = new VaxClipboard(this);
 
         // default config
         this.config = _.defaults(config, {
@@ -468,10 +476,25 @@
                 {
                     self.isSpacebarDown = true;
                 }
+
+                if (evt.keyCode == 17) // ctrl
+                {
+                    self.isCtrlDown = true;
+                }
+
+                if (evt.keyCode == 18) // alt
+                {
+                    self.isAltDown = true;
+                }
+
+                if (evt.keyCode == 16) // shift
+                {
+                    self.isAltDown = true;
+                }
             });
 
             $(document).keyup(function (evt) { // should be a DOM node for that
-                if (evt.keyCode == 88) // X key
+                if (evt.keyCode == 88 && !evt.ctrlKey) // X key
                 {
                     self.showComponentSelector();
                 }
@@ -479,6 +502,21 @@
                 if (evt.keyCode == 32) // spacebar
                 {
                     self.isSpacebarDown = false;
+                }
+
+                if (evt.keyCode == 17) // ctrl
+                {
+                    self.isCtrlDown = false;
+                }
+
+                if (evt.keyCode == 18) // alt
+                {
+                    self.isAltDown = false;
+                }
+
+                if (evt.keyCode == 16) // shift
+                {
+                    self.isAltDown = false;
                 }
 
                 if (evt.keyCode == 46 || evt.keyCode == 8) // Delete
@@ -489,6 +527,21 @@
                 if (evt.keyCode == 90 && evt.ctrlKey) // Ctrl+Z
                 {
                     self.history.undo();
+                }
+
+                if (evt.keyCode == 67 && evt.ctrlKey) // Ctrl+C
+                {
+                    self.clipboard.copy();
+                }
+
+                if (evt.keyCode == 86 && evt.ctrlKey) // Ctrl+V
+                {
+                    self.clipboard.paste();
+                }
+
+                if (evt.keyCode == 88 && evt.ctrlKey) // Ctrl+X
+                {
+                    self.clipboard.cut();
                 }
             });
 
@@ -1208,8 +1261,52 @@
 
                 if (nodeId in vaxRoot.nodes)
                 {
-                    vaxRoot.nodes[nodeId].highlightSelection();
+                    this.vaxRoot.nodes[nodeId].highlightSelection();
                 }
+            };
+
+            this.addNodeIdToSelection = function(nodeId)
+            {
+                if (_.contains(this.nodesIds, nodeId))
+                {
+                    return;
+                }
+
+                this.nodesIds.push(nodeId);
+                if (nodeId in this.vaxRoot.nodes)
+                {
+                    this.vaxRoot.nodes[nodeId].highlightSelection();
+                }
+            };
+
+            this.removeNodeIdFromSelection = function(nodeId)
+            {
+                if (!_.contains(this.nodesIds, nodeId))
+                {
+                    return;
+                }
+
+                this.nodesIds = _.reject(this.nodesIds, function(givenNodeId) { return givenNodeId == nodeId; });
+                if (nodeId in this.vaxRoot.nodes)
+                {
+                    this.vaxRoot.nodes[nodeId].deselect();
+                }
+            };
+
+            this.selectByNodesIds = function(nodesIds)
+            {
+                var self = this;
+
+                this.clear();
+                this.nodesIds = nodesIds;
+
+                _.each(nodesIds, function(nodeId)
+                {
+                    if (nodeId in vaxRoot.nodes)
+                    {
+                        self.vaxRoot.nodes[nodeId].highlightSelection();
+                    }
+                });
             };
 
             this.hasNodeId = function(nodeId)
@@ -1242,9 +1339,9 @@
                 });
             };
 
-            this.removeSelectedElements = function()
+            this.removeSelectedElements = function(forced)
             {
-                if (_.size(this.nodesIds) > 0 && confirm('Вы действительно хотите удалить выделенные узлы?'))
+                if (_.size(this.nodesIds) > 0 && (forced || confirm('Вы действительно хотите удалить выделенные узлы?')) )
                 {
                     _.each(this.nodesIds, function(nodeId)
                     {
@@ -1312,6 +1409,45 @@
                     this.vaxRoot.loadGraph(prevGraph);
                     this.vaxRoot.selection.clear();
                     this.stack.pop();
+                }
+            };
+        };
+
+        function VaxClipboard(vax)
+        {
+            var self = this;
+
+            if (!(vax instanceof VAX)) {
+                throw new Error("Instance of VAX was expected!");
+            }
+
+            this.vaxRoot = vax;
+            this.bufferGraph = null;
+
+            this.copy = function()
+            {
+                var selectedNodesIds = this.vaxRoot.selection.getNodesIds();
+                if (selectedNodesIds.length > 0)
+                {
+                    this.bufferGraph = this.vaxRoot.saveGraph(selectedNodesIds);
+                }
+            };
+
+            this.cut = function()
+            {
+                this.copy();
+                this.vaxRoot.selection.removeSelectedElements(true);
+            };
+
+            this.paste = function()
+            {
+                if (this.bufferGraph)
+                {
+                    var pastedNodesIds = this.vaxRoot.appendGraph(this.bufferGraph, {x: 50, y: 50});
+
+                    this.vaxRoot.selection.selectByNodesIds(pastedNodesIds);
+
+                    this.vaxRoot.history.pushAction('pasted');
                 }
             };
         };
@@ -1571,6 +1707,11 @@
 
             this.isWired = function() {
                 return _.keys(self.wires).length > 0;
+            };
+
+            this.getWireIds = function()
+            {
+                return _.keys(this.wires);
             };
 
             this.unwire = function(wireId)
@@ -2061,31 +2202,46 @@
                 {
                     self.draggingGroupsOffsets = {};
 
-                    var selection = self.getVAX().selection;
+                    var vax = self.getVAX();
+                    var selection = vax.selection;
 
                     if (!selection.hasNodeId(self.id))
                     {
-                        selection.selectByNodeId(self.id);
+                        if (vax.isCtrlDown)
+                        {
+                            selection.addNodeIdToSelection(self.id);
+                        }
+                        else
+                        {
+                            selection.selectByNodeId(self.id);
+                        }
                     }
                     else
                     {
-                        // drag other groups accordingly
-                        _.each(selection.getNodesIds(), function(nodeId)
+                        if (vax.isCtrlDown)
                         {
-                            if (nodeId == self.id)
+                            selection.removeNodeIdFromSelection(self.id);
+                        }
+                        else
+                        {
+                            // drag other groups accordingly
+                            _.each(selection.getNodesIds(), function(nodeId)
                             {
-                                return;
-                            }
+                                if (nodeId == self.id)
+                                {
+                                    return;
+                                }
 
-                            var node = self.getVAX().nodes[nodeId];
-                            if (node)
-                            {
-                                self.draggingGroupsOffsets[nodeId] = {
-                                    dx: node.draggingGroup.getX() - self.draggingGroup.getX(),
-                                    dy: node.draggingGroup.getY() - self.draggingGroup.getY(),
-                                };
-                            }
-                        });
+                                var node = self.getVAX().nodes[nodeId];
+                                if (node)
+                                {
+                                    self.draggingGroupsOffsets[nodeId] = {
+                                        dx: node.draggingGroup.getX() - self.draggingGroup.getX(),
+                                        dy: node.draggingGroup.getY() - self.draggingGroup.getY(),
+                                    };
+                                }
+                            });
+                        }
                     }
                 });
 
@@ -2221,6 +2377,33 @@
                 return _.size(this.outputSockets);
             };
 
+            this.getInputSockets = function()
+            {
+                return this.inputSockets;
+            };
+
+            this.getOutputSockets = function()
+            {
+                return this.outputSockets;
+            };
+
+            this.getWiresIds = function()
+            {
+                var inputWiresIds  = _.map(this.inputSockets,  function(socket) { return socket.getWireIds(); });
+                var outputWiresIds = _.map(this.outputSockets, function(socket) { return socket.getWireIds(); });
+
+                var wiresIds = _.unique(_.flatten(_.union(inputWiresIds, outputWiresIds)), false);
+
+                return wiresIds;
+            };
+
+            this.getWires = function()
+            {
+                var self = this;
+
+                return _.map(this.getWiresIds(), function(wireId) { return self.getVAX().wires[wireId]; });
+            };
+
             this.getWidth = function () {
                 return self.moveContainer.attr('width')
             };
@@ -2306,6 +2489,29 @@
                 return self.outputSocketId;
             };
 
+            this.getInputSocket = function()
+            {
+                return vaxRoot.sockets[this.inputSocketId];
+            };
+
+            this.getOutputSocket = function()
+            {
+                return vaxRoot.sockets[this.outputSocketId];
+            };
+
+            this.isConnectedToNodeId = function(nodeId)
+            {
+                return this.getInputSocket().getNode().getId() == nodeId || this.getOutputSocket().getNode().getId();
+            };
+
+            this.isConnectedToBothOfNodesIds = function(nodesIds)
+            {
+                var inputNodeId  = this.getInputSocket().getNode().getId();
+                var outputNodeId = this.getOutputSocket().getNode().getId();
+
+                return _.contains(nodesIds, inputNodeId) && _.contains(nodesIds, outputNodeId);
+            };
+
             this.refresh = function()
             {
                 if (self.path)
@@ -2322,7 +2528,7 @@
                 self.path.attr({
                     'stroke': s2.config.color, // color of output socket
                     'stroke-width': 3,
-                    'title': "Wire from " + self.inputSocketId + " to " + self.outputSocketId,
+                    'title': "Wire #" + self.id + " from " + self.inputSocketId + " to " + self.outputSocketId,
                     'arrow-start': 'classic-narrow-long',
                 });
 
@@ -2351,6 +2557,8 @@
                     self.glow.remove();
                 }
             };
+
+
 
             this.doesIntersectWithRect = function(rect)
             {
@@ -2493,12 +2701,14 @@
             return JSON.string(this.composeTrees());
         };
 
-        this.saveGraph = function()
+        this.saveGraph = function(filterNodesIds)
         {
             var self = this;
 
+            var nodesToPickle = filterNodesIds ? this.getNodesByIds(filterNodesIds) : self.nodes;
+
             // --- nodes
-            var nodes = _.map(self.nodes, function(node) {
+            var nodesPickles = _.map(nodesToPickle, function(node) {
                 var nodePickle = {
                     id: node.getCompactId(),
                     c: node.config.component,
@@ -2526,7 +2736,9 @@
             });
 
             // --- wires
-            var wires = _.map(self.wires, function(wire)
+            var wiresToPickle = filterNodesIds ? self.getWiresBetweenNodesIds(filterNodesIds) : self.wires;
+
+            var wiresPickles = _.map(wiresToPickle, function(wire)
             {
                 var input  = self.sockets[wire.getInputSocketId()];
                 var output = self.sockets[wire.getOutputSocketId()];
@@ -2537,9 +2749,38 @@
             // gather everything in a blueprint
             return {
                 version: "0.1",
-                nodes: nodes,
-                wires: wires
+                nodes: nodesPickles,
+                wires: wiresPickles
             };
+        };
+
+        this.getNodesByIds = function(nodesIds)
+        {
+            var self = this;
+            return _.map(nodesIds, function(nodeId) { return self.nodes[nodeId]; });
+        };
+
+        this.getWiresBetweenNodesIds = function(nodesIds)
+        {
+            var self = this;
+            var wiresIds = [];
+
+            _.each(nodesIds, function(nodeId)
+            {
+                var nodeWires = self.getNodeById(nodeId).getWires();
+
+                _.each(nodeWires, function(wire)
+                {
+                    if (wire.isConnectedToBothOfNodesIds(nodesIds))
+                    {
+                        wiresIds.push(wire.id);
+                    }
+                });
+            });
+
+            wiresIds = _.unique(wiresIds);
+
+            return _.map(wiresIds, function(wireId) { return self.wires[wireId]; });
         };
 
         this.serializeGraph = function()
@@ -2557,10 +2798,18 @@
 
         this.loadGraph = function(graph)
         {
+            this.clear();
+            return this.appendGraph(graph);
+        };
+
+        this.appendGraph = function(graph, positionOffset)
+        {
             var self = this;
 
-            // clear itself
-            self.clear();
+            positionOffset = _.defaults(positionOffset, {
+                x: 0,
+                y: 0
+            });
 
             // pickledId -> realId nodes mapping
             var nodesIdsMap = {};
@@ -2569,7 +2818,8 @@
             {
                 _.each(graph.nodes, function(nodePickle)
                 {
-                    // TODO: handle errors
+                    // TODO: handle errors and return them
+                    // TODO: if case of nodes/wires/attrs -> show errors as comments on canvas in places of nodes
                     var nodeConfig = self.cloneComponentConfig(nodePickle.c);
 
                     // fill in type instances
@@ -2599,8 +2849,8 @@
                     }
 
                     // set position
-                    nodeConfig.x = nodePickle.x || 0;
-                    nodeConfig.y = nodePickle.y || 0;
+                    nodeConfig.x = (nodePickle.x || 0) + positionOffset.x;
+                    nodeConfig.y = (nodePickle.y || 0) + positionOffset.y;
 
                     // create actualNode
                     var node = vaxRoot.createNode(nodeConfig);
@@ -2626,6 +2876,9 @@
                     self.wire(outputSocketId, inputSocketId);
                 });
             }
+
+            // created nodesIds
+            return _.values(nodesIdsMap);
         };
 
         // init VAX
