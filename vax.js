@@ -63,6 +63,141 @@
             );
         },
 
+        getUserFunctionTypes: function()
+        {
+            return {
+                "UF_Outputs": {
+                    "color": "#2f2"
+                },
+                "UF_Output": {
+                    "extends": "UF_Outputs",
+                    "color": "#2f2"
+                },
+                "UF_Attributes": {
+                    "color": "#f2c"
+                },
+                "UF_Attribute": {
+                    "extends": "UF_Attributes",
+                    "color": "#f2c"
+                },
+                "UF_Name": {
+                    "color": "#f00"
+                },
+                "UF_String": {
+                    "color": "#f6a"
+                }
+            };
+        },
+
+        getUserFunctionComponents: function()
+        {
+           return {
+               "UF_Input": {
+                   "title": "Input",
+                   "typeParams": [
+                       "T"
+                   ],
+                   "attrs": {
+                       "Name": {
+                           "type": "UF_Name",
+                           "default": "I"
+                       },
+                       "Title": {
+                           "type": "UF_String",
+                           "default": "Title"
+                       }
+                   },
+                   "out": {
+                       "O": "@T"
+                   }
+               },
+               "UF_Output": {
+                   "title": "Output",
+                   "typeParams": [
+                       "T"
+                   ],
+                   "attrs": {
+                       "Name": {
+                           "type": "UF_Name",
+                           "default": "O"
+                       },
+                       "Title": {
+                           "type": "UF_String",
+                           "default": "Title"
+                       }
+                   },
+                   "in": {
+                       "I": "@T"
+                   },
+                   "out": {
+                       "O": "UF_Output"
+                   }
+               },
+               "UF_Function": {
+                   "title": "Function",
+                   "attrs": {
+                       "Name": {
+                           "type": "UF_Name",
+                           "default": "Function"
+                       },
+                       "Description": {
+                           "type": "UF_String",
+                           "default": "Description"
+                       }
+                   },
+                   "in": {
+                       "Outputs": "UF_Outputs",
+                       "Attributes": "UF_Attributes"
+                   }
+               },
+               "UF_Attribute": {
+                   "title": "Attribute",
+                   "typeParams": [
+                       "T"
+                   ],
+                   "attrs": {
+                       "Name": {
+                           "type": "UF_Name",
+                           "default": "Name"
+                       },
+                       "Title": {
+                           "type": "UF_String",
+                           "default": "Title"
+                       }
+                   },
+                   "out": {
+                       "A": "UF_Attribute"
+                   }
+               },
+               "UF_Attributes": {
+                   "title": "Collect attributes",
+                   "in": {
+                       "A1": "UF_Attributes",
+                       "A2": "UF_Attributes",
+                       "A3": "UF_Attributes",
+                       "A4": "UF_Attributes",
+                       "A5": "UF_Attributes"
+                   },
+                   "out": {
+                       "O": "UF_Attributes"
+                   }
+               },
+               "UF_Outputs": {
+                   "title": "Collect outputs",
+                   "in": {
+                       "O1": "UF_Attributes",
+                       "O2": "UF_Attributes",
+                       "O3": "UF_Attributes",
+                       "O4": "UF_Attributes",
+                       "O5": "UF_Attributes"
+                   },
+                   "out": {
+                       "O": "UF_Attributes"
+                   }
+               }
+           };
+        }
+
     }); // vax.extend
 
     // VAX class
@@ -79,14 +214,23 @@
         this.wrapperHeight = $wrapper.height();
 
         var scrollbarSpinnerSize = this.scrollbarSpinnerSize = 20;
+        var toolbarSize = this.toolbarSize = 40;
+
+        // toolbar
+        var $toolbar = this.$toolbar = $('<div class="vax-toolbar"><div class="vax-toolbar-btn" data-action="createFunction">F</div><div class="vax-toolbar-btn" data-action="help">?</div></div>');
+        $wrapper.append($toolbar);
+
+        // tabs wrapper
+        var $tabsWrapper = this.$tabsWrapper = $('<div class="vax-tabs-wrapper"/>');
+        $wrapper.append($tabsWrapper);
 
         // canvas element
-        this.canvasWidth = this.wrapperWidth - scrollbarSpinnerSize;
-        this.canvasHeight = this.wrapperHeight - scrollbarSpinnerSize;
+        this.canvasWidth = this.wrapperWidth - scrollbarSpinnerSize - toolbarSize;
+        this.canvasHeight = this.wrapperHeight - scrollbarSpinnerSize - toolbarSize;
 
         this.canvasDomElementId = domElementId + '-vax-canvas-' + vax.genNextId();
         var $canvas = this.$canvas = $('<div id="' + this.canvasDomElementId + '" class="vax-canvas"/>');
-        $canvas.css({'width': this.canvasWidth, 'height': this.canvasHeight, 'left': 0, 'top': 0});
+        $canvas.css({'width': this.canvasWidth, 'height': this.canvasHeight});
 
         $wrapper.append(this.$canvas);
 
@@ -133,6 +277,12 @@
         // create ui
         this.ui = new VaxUI(this);
 
+        // create tabs
+        this.tabs = new VaxTabs(this);
+
+        // are we currently creating user function?
+        this.isCreatingUserFunction = false;
+
         // setting states of down-move-up operations
         this.isDragging  = false;
         this.isWiring    = false;
@@ -162,9 +312,7 @@
             schema: {
                 types: {},
                 components: {} // elements,nodes?
-            },
-            skin: {}, // theme. ui
-            lang: {}
+            }
         });
 
         this.schema = {};
@@ -309,6 +457,8 @@
                 };
             });
 
+            types = _.extend(types, vax.getUserFunctionTypes());
+
             return types;
         };
 
@@ -317,6 +467,8 @@
             var self = this;
 
             var componentsConfig = schema.components || {};
+
+            components = _.extend(componentsConfig, vax.getUserFunctionComponents());
 
             var components = {};
 
@@ -375,6 +527,11 @@
         this.cloneComponentConfig = function(component)
         {
             var componentConfig = this.schema.components[component];
+
+            if (!componentConfig)
+            {
+                return undefined;
+            }
 
             // shallow clone
             var nodeConfig = _.clone(componentConfig);
@@ -551,6 +708,9 @@
 
             // init ui
             this.ui.init();
+
+            // init tabs
+            this.tabs.init();
 
             // selection handler
             self.$canvas.mousedown(function(e)
@@ -1005,15 +1165,18 @@
                     self.fillTypeInstance(nodeConfig, typeAlias, typeSignature);
                 });
 
-                self.createNode(nodeConfig);
+                var createdNode = self.createNode(nodeConfig);
 
                 self.selectorDlg.destroy();
                 delete self.selectorDlg;
 
                 self.lastSelectedComponent = component;
 
+                // select the created node
+                self.selection.selectByNodeId(createdNode.getId());
+
                 // push action into history
-                this.vaxRoot.history.pushAction('createdANode');
+                self.history.pushAction('createdANode');
             });
 
             self.selectorDlg.on('cancel', function()
@@ -1212,7 +1375,13 @@
                         vaxRoot.nodes[nodeId].deselect();
                     }
                 });
+                this.nodesIds = [];
 
+                this.clearWires();
+            };
+
+            this.clearWires = function()
+            {
                 _.each(this.wiresIds, function(wireId)
                 {
                     if (wireId in vaxRoot.wires)
@@ -1221,7 +1390,7 @@
                     }
                 });
 
-                this.nodesIds = [];
+
                 this.wiresIds = [];
             };
 
@@ -1271,6 +1440,8 @@
                 {
                     return;
                 }
+
+                this.clearWires();
 
                 this.nodesIds.push(nodeId);
                 if (nodeId in this.vaxRoot.nodes)
@@ -1498,12 +1669,12 @@
 
                 if (self.isInput())
                 {
-                    self.caption = raphael.text(cx + 10, cy, self.config.title + " | " + self.config.type);
+                    self.caption = raphael.text(cx + 10, cy, self.config.title + " (" + self.config.type + ')');
                     self.caption.attr('text-anchor', 'start');
                 }
                 else
                 {
-                    self.caption = raphael.text(cx - 10, cy, self.config.type + " | " + self.config.title);
+                    self.caption = raphael.text(cx - 10, cy, '(' + self.config.type + ')');
                     self.caption.attr('text-anchor', 'end');
                 }
 
@@ -1613,7 +1784,7 @@
                                             vaxRoot.wire(self.id, targetSocket.data("socketId"));
 
                                             // push action into history
-                                            this.vaxRoot.history.pushAction('wired2Sockets');
+                                            vaxRoot.history.pushAction('wired2Sockets');
                                         }
                                     }
                                 }
@@ -1861,6 +2032,66 @@
                 self.ui.hideOverlay();
 
                 this.trigger('destroy');
+            };
+        };
+
+        function VaxTabs(vaxRoot)
+        {
+            var self = this;
+
+            if (!(vaxRoot instanceof VAX)) {
+                throw new Error("Instance of VAX was expected");
+            }
+
+            this.vaxRoot = vaxRoot;
+            this.currentTab = 'blueprint';
+
+            var $tabsWrapper = this.$tabsWrapper = this.vaxRoot.$tabsWrapper;
+
+            this.init = function()
+            {
+                var $blueprint = this.$blueprint = $('<div class="vax-tab vax-tab-is-active" data-tab="blueprint">Blueprint</div>');
+                this.$tabsWrapper.append($blueprint);
+
+                this.$tabsWrapper.on('click', '[data-tab]', function()
+                {
+                    self.switchToTab($(this).attr('data-tab'));
+                });
+            };
+
+            this.createUserFunctionTab = function()
+            {
+                var id = 'VaxUserFunction-' + vax.genNextId();
+                var $tab = $('<div class="vax-tab">New function</div>').attr('data-tab', id);
+                this.$tabsWrapper.append($tab);
+            };
+
+            this.switchToTab = function(tab)
+            {
+                if (this.currentTab == tab)
+                {
+                    return;
+                }
+            };
+
+        };
+
+        function VaxUserFunctionStorage(vaxRoot)
+        {
+            var self = this;
+
+            if (!(vaxRoot instanceof VAX)) {
+                throw new Error("Instance of VAX was expected");
+            }
+
+            this.loadAll = function()
+            {
+
+            };
+
+            this.save = function(id, serializedGraph)
+            {
+                window.localStorage.setItem(id, serializedGraph);
             };
         };
 
@@ -2821,6 +3052,11 @@
                     // TODO: handle errors and return them
                     // TODO: if case of nodes/wires/attrs -> show errors as comments on canvas in places of nodes
                     var nodeConfig = self.cloneComponentConfig(nodePickle.c);
+
+                    if (!nodeConfig)
+                    {
+                        return;
+                    }
 
                     // fill in type instances
                     if (nodePickle.t)

@@ -15,7 +15,69 @@
     .vax-canvas {
         position: absolute;
         background: url("vax-grid.jpg") #222 repeat;
+        left: 41px;
+        top: 41px;
+        bottom: 20px;
+        right: 20px;
     }
+
+    .vax-toolbar {
+        position: absolute;
+        width: 40px;
+        background: #222;
+        top: 0;
+        bottom: 0;
+        text-align: center;
+    }
+
+        .vax-toolbar-btn {
+            width: 32px;
+            height: 32px;
+            margin: 8px auto;
+            text-align: center;
+            border: 1px solid silver;
+            border-radius: 3px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            background: #555;
+            vertical-align: middle;
+        }
+
+    .vax-tabs-wrapper {
+        position: absolute;
+        height: 40px;
+        background: #333;
+        left: 41px;
+        right: 0;
+        top: 0;
+        text-align: left;
+        padding: 0 10px;
+        overflow: hidden;
+    }
+
+        .vax-tab {
+            height: 20px;
+            padding: 3px 10px 7px 10px;
+            text-align: center;
+            min-width: 60px;
+            display: inline-block;
+            border: 2px solid #000;
+            position: relative;
+            border-bottom: none;
+            top: 10px;
+            border-radius: 4px;
+            color: white;
+            background: #444;
+            cursor: pointer;
+        }
+
+            .vax-tab-is-active {
+                border-color: orange;
+                font-weight: bold;
+                color: orange;
+                cursor: default;
+            }
 
     .vax-is-panning {
         cursor: url('closedhand.cur'), default;
@@ -46,13 +108,13 @@
     .vax-horiz-scrollbar {
         height: 20px;
         bottom: 0px;
-        left: 0;
+        left: 40px;
         right: 20px;
     }
 
     .vax-vert-scrollbar {
         width: 20px;
-        top: 0;
+        top: 40px;
         right: 0px;
         bottom: 20px;
     }
