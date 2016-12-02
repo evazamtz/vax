@@ -58,7 +58,7 @@
 
         .vax-tab {
             height: 20px;
-            padding: 3px 10px 7px 10px;
+            padding: 3px 15px 7px 10px;
             text-align: center;
             min-width: 60px;
             display: inline-block;
@@ -78,6 +78,28 @@
                 color: orange;
                 cursor: default;
             }
+
+            .vax-tab-close {
+                position: absolute;
+                width: 12px;
+                height: 12px;
+                top: 2px;
+                right: 2px;
+                font-family: Tahoma;
+                font-size: 8px;
+                font-weight: normal;
+                color: white;
+                background: black;
+                border-radius: 4px;
+                border: 1px solid silver;
+                cursor: pointer;
+            }
+
+                .vax-tab-close:hover {
+                    background: #bbb;
+                    color: #000;
+                    border-color: #000;
+                }
 
     .vax-is-panning {
         cursor: url('closedhand.cur'), default;
@@ -228,6 +250,14 @@
                 background: #999;
                 color: #111;
                 border: 1px solid silver;
+            }
+
+            .vax-text-input {
+                border-radius: 5px;
+            }
+
+            .vax-text-input-wide {
+
             }
 
     /** ===TYPE PICKER */

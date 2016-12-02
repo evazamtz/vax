@@ -70,15 +70,15 @@
                     "color": "#2f2"
                 },
                 "UF_Output": {
-                    "extends": "UF_Outputs",
-                    "color": "#2f2"
+                    "color": "#2f2",
+                    "extends": "UF_Outputs"
                 },
                 "UF_Attributes": {
                     "color": "#f2c"
                 },
                 "UF_Attribute": {
-                    "extends": "UF_Attributes",
-                    "color": "#f2c"
+                    "color": "#f2c",
+                    "extends": "UF_Attributes"
                 },
                 "UF_Name": {
                     "color": "#f00"
@@ -104,7 +104,7 @@
                        },
                        "Title": {
                            "type": "UF_String",
-                           "default": "Title"
+                           "default": "Input"
                        }
                    },
                    "out": {
@@ -123,7 +123,7 @@
                        },
                        "Title": {
                            "type": "UF_String",
-                           "default": "Title"
+                           "default": "Output"
                        }
                    },
                    "in": {
@@ -136,14 +136,10 @@
                "UF_Function": {
                    "title": "Function",
                    "attrs": {
-                       "Name": {
-                           "type": "UF_Name",
-                           "default": "Function"
-                       },
-                       "Description": {
+                       "Title": {
                            "type": "UF_String",
-                           "default": "Description"
-                       }
+                           "default": "Node"
+                       },
                    },
                    "in": {
                        "Outputs": "UF_Outputs",
@@ -163,10 +159,25 @@
                        "Title": {
                            "type": "UF_String",
                            "default": "Title"
+                       },
+                       "Default": {
+                           "type": "UF_String",
+                           "default": "Default value"
                        }
                    },
                    "out": {
-                       "A": "UF_Attribute"
+                       "A": "UF_Attributes"
+                   }
+               },
+               "UF_Outputs": {
+                   "title": "Collect outputs",
+                   "in": {
+                       "O1": "UF_Outputs",
+                       "O2": "UF_Outputs",
+                       "O3": "UF_Outputs",
+                   },
+                   "out": {
+                       "O": "UF_Outputs"
                    }
                },
                "UF_Attributes": {
@@ -175,21 +186,6 @@
                        "A1": "UF_Attributes",
                        "A2": "UF_Attributes",
                        "A3": "UF_Attributes",
-                       "A4": "UF_Attributes",
-                       "A5": "UF_Attributes"
-                   },
-                   "out": {
-                       "O": "UF_Attributes"
-                   }
-               },
-               "UF_Outputs": {
-                   "title": "Collect outputs",
-                   "in": {
-                       "O1": "UF_Attributes",
-                       "O2": "UF_Attributes",
-                       "O3": "UF_Attributes",
-                       "O4": "UF_Attributes",
-                       "O5": "UF_Attributes"
                    },
                    "out": {
                        "O": "UF_Attributes"
@@ -280,8 +276,8 @@
         // create tabs
         this.tabs = new VaxTabs(this);
 
-        // are we currently creating user function?
-        this.isCreatingUserFunction = false;
+        // create user function storage
+        this.userFunctionStorage = new VaxUserFunctionStorage(this);
 
         // setting states of down-move-up operations
         this.isDragging  = false;
@@ -302,7 +298,7 @@
         this.selection = new VaxSelection(this);
 
         // operations history
-        this.history = new VaxHistory(this);
+        this.history = this.tabs.getCurrentTabHistory();
 
         // clipboard
         this.clipboard = new VaxClipboard(this);
@@ -400,6 +396,8 @@
 
             var typesConfig = schema.types || {};
 
+            typesConfig = _.extend(typesConfig, vax.getUserFunctionTypes());
+
             var types = {
                 Any: {
                     color: "#fff",
@@ -449,15 +447,12 @@
                     throw new Error("Type params should a plain array with length > 0!");
                 }
 
-
                 types[name] = {
                     color: self.resolveColor(type.color),
                     extends: _.filter(_.unique(allExtends, false)),
                     typeParams: type.typeParams || [],
                 };
             });
-
-            types = _.extend(types, vax.getUserFunctionTypes());
 
             return types;
         };
@@ -522,6 +517,16 @@
             });
 
             return components;
+        };
+
+        this.isComponentAppropriate = function(component)
+        {
+            return !(this.tabs.isCurrentlyBlueprint() && component.substring(0, 3) == 'UF_');
+        };
+
+        this.isTypeAppropriate = function(type)
+        {
+            return !(this.tabs.isCurrentlyBlueprint() && type.substring(0, 3) == 'UF_');
         };
 
         this.cloneComponentConfig = function(component)
@@ -651,10 +656,7 @@
             });
 
             $(document).keyup(function (evt) { // should be a DOM node for that
-                if (evt.keyCode == 88 && !evt.ctrlKey) // X key
-                {
-                    self.showComponentSelector();
-                }
+
 
                 if (evt.keyCode == 32) // spacebar
                 {
@@ -676,30 +678,45 @@
                     self.isAltDown = false;
                 }
 
-                if (evt.keyCode == 46 || evt.keyCode == 8) // Delete
+
+                if (!self.ui.hasOverlay) // non-overlay keys
                 {
-                    self.selection.removeSelectedElements();
+                    if (evt.keyCode == 88 && !evt.ctrlKey) // X key
+                    {
+                        self.showComponentSelector();
+                    }
+
+                    if (evt.keyCode == 70) // F key
+                    {
+                        self.showNewUserFunctionDialog();
+                    }
+
+                    if (evt.keyCode == 46 || evt.keyCode == 8) // Delete
+                    {
+                        self.selection.removeSelectedElements();
+                    }
+
+                    if (evt.keyCode == 90 && evt.ctrlKey) // Ctrl+Z
+                    {
+                        self.history.undo();
+                    }
+
+                    if (evt.keyCode == 67 && evt.ctrlKey) // Ctrl+C
+                    {
+                        self.clipboard.copy();
+                    }
+
+                    if (evt.keyCode == 86 && evt.ctrlKey) // Ctrl+V
+                    {
+                        self.clipboard.paste();
+                    }
+
+                    if (evt.keyCode == 88 && evt.ctrlKey) // Ctrl+X
+                    {
+                        self.clipboard.cut();
+                    }
                 }
 
-                if (evt.keyCode == 90 && evt.ctrlKey) // Ctrl+Z
-                {
-                    self.history.undo();
-                }
-
-                if (evt.keyCode == 67 && evt.ctrlKey) // Ctrl+C
-                {
-                    self.clipboard.copy();
-                }
-
-                if (evt.keyCode == 86 && evt.ctrlKey) // Ctrl+V
-                {
-                    self.clipboard.paste();
-                }
-
-                if (evt.keyCode == 88 && evt.ctrlKey) // Ctrl+X
-                {
-                    self.clipboard.cut();
-                }
             });
 
             // draw scrollbars
@@ -1007,6 +1024,11 @@
             var $select = $('[data-role="component"]', $selectorBody).css({'width': '100%'});
             _.each(self.schema.components, function(component, name)
             {
+                if (!self.isComponentAppropriate(name))
+                {
+                    return;
+                }
+
                 var title = component.title;
                 if (component.typeParams && component.typeParams.length > 0)
                 {
@@ -1043,23 +1065,30 @@
                         var $typePicker = $('<div class="vax-type-picker"/>').text(typeAlias + ' = ').attr('data-type-alias', typeAlias).attr('data-type-signature', 'Any');
                         var $typePickerSelect = $('<select class="vax-type-picker-select vax-chosen" data-type-n="1"/>');
 
-                        _.each(self.schema.types, function(type, name)
+                        _.each([self.tabs.getCurrentFunctionTypeParams(), self.schema.types], function(types)
                         {
-                            var title = name;
-
-                            var $option = $('<option/>').attr('value', name);
-
-                            if (type.typeParams && type.typeParams.length)
+                            _.each(types, function(type, name)
                             {
-                                title = title + ' [' + type.typeParams.join(',') + ']';
-                                $option.attr('data-type-params-length', type.typeParams.length);
-                            }
+                                if (!self.isTypeAppropriate(name))
+                                {
+                                    return;
+                                }
 
-                            $option.text(title);
+                                var title = name;
 
-                            $typePickerSelect.append($option);
+                                var $option = $('<option/>').attr('value', name);
+
+                                if (type.typeParams && type.typeParams.length)
+                                {
+                                    title = title + ' [' + type.typeParams.join(',') + ']';
+                                    $option.attr('data-type-params-length', type.typeParams.length);
+                                }
+
+                                $option.text(title);
+
+                                $typePickerSelect.append($option);
+                            });
                         });
-
 
                         $typePicker.append($typePickerSelect);
                         $typePicker.append($('<span data-type-n="1"/>'));
@@ -1198,6 +1227,62 @@
         this.createDraggingGroup = function(rootRect)
         {
             return new VaxDraggingGroup(this, rootRect);
+        };
+
+        this.showNewUserFunctionDialog = function()
+        {
+            var self = this;
+
+            if (self.userFunctionDlg)
+            {
+                return;
+            }
+
+            var $body = $('<input type="text" placeholder="Function name" name="name" maxlength="50" class="vax-text-input vax-text-input-wide" /><hr/>Type params: <select><option value="0">None</option><option value="1">[A]</option><option value="2">[A, B]</option><option value="3">[A, B, C]</option></select>')
+
+            self.userFunctionDlg = self.ui.createDialog({header: 'Create a function', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+            self.userFunctionDlg.show();
+
+            var $dlg = self.userFunctionDlg.$dlg;
+
+            $('select', $dlg).chosen({});
+            $('input[name="name"]', $dlg).focus();
+
+            self.userFunctionDlg.on('ok', function()
+            {
+                var functionName    = $.trim($('input[name="name"]', $dlg).val()).substring(0, 50);
+                var typeParamsCount = $('select', $dlg).val();
+
+                if (functionName.length > 0)
+                {
+                    var selectedGraph = self.selection.serializeSelectedGraph();
+
+                    var tabId = self.tabs.createNewFunctionTab(self.userFunctionStorage.generateNewId(), functionName, typeParamsCount);
+                    self.tabs.switchToTab(tabId);
+
+                    if (selectedGraph)
+                    {
+                        self.appendGraph(selectedGraph);
+                    }
+
+                    // add UF_Function node if one is missing
+                    var functionNode = _.find(self.nodes, function(node) { return node.config.component == 'UF_Function'; });
+                    if (!functionNode)
+                    {
+                        self.appendGraph({nodes:[{id:1,c:"UF_Function", x: self.canvasWidth * .6, y: self.canvasHeight * .3,a: {"Title": functionName}}]});
+                    }
+
+                    // close dlg
+                    self.userFunctionDlg.destroy();
+                    delete self.userFunctionDlg;
+                }
+            });
+
+            self.userFunctionDlg.on('cancel', function()
+            {
+                self.userFunctionDlg.destroy();
+                delete self.userFunctionDlg;
+            });
         };
 
         function VaxDraggingGroup(vax, rootRect)
@@ -1541,6 +1626,11 @@
                 // push action into history
                 this.vaxRoot.history.pushAction('removedElements');
             };
+
+            this.serializeSelectedGraph = function()
+            {
+                return this.nodesIds.length > 0 ? this.vaxRoot.saveGraph(this.nodesIds) : undefined;
+            };
         };
 
         /*
@@ -1597,10 +1687,11 @@
 
             this.copy = function()
             {
-                var selectedNodesIds = this.vaxRoot.selection.getNodesIds();
-                if (selectedNodesIds.length > 0)
+                var selectedGraph = this.vaxRoot.selection.serializeSelectedGraph();
+
+                if (selectedGraph)
                 {
-                    this.bufferGraph = this.vaxRoot.saveGraph(selectedNodesIds);
+                    this.bufferGraph = selectedGraph;
                 }
             };
 
@@ -1912,6 +2003,7 @@
             }
 
             self.vaxRoot = vax;
+            self.hasOverlay = false;
 
             this.init = function()
             {
@@ -1922,11 +2014,13 @@
             this.showOverlay = function()
             {
                 this.$overlay.addClass('vax-overlay-visible');
+                this.hasOverlay = true;
             };
 
             this.hideOverlay = function()
             {
                 this.$overlay.removeClass('vax-overlay-visible');
+                this.hasOverlay = false;
             };
 
             this.createDialog = function(options)
@@ -2044,7 +2138,19 @@
             }
 
             this.vaxRoot = vaxRoot;
-            this.currentTab = 'blueprint';
+
+            this.tabs = {
+                'blueprint': {
+                    id: 'blueprint',
+                    history: new VaxHistory(vaxRoot),
+                    graph: {},
+                    type: 'blueprint',
+                    functionTypeParams: [],
+                    isSaved: false
+                }
+            };
+
+            this.currentTabId = 'blueprint';
 
             var $tabsWrapper = this.$tabsWrapper = this.vaxRoot.$tabsWrapper;
 
@@ -2059,21 +2165,110 @@
                 });
             };
 
-            this.createUserFunctionTab = function()
+            this.createNewFunctionTab = function(id, name, typeParamsCount)
             {
-                var id = 'VaxUserFunction-' + vax.genNextId();
-                var $tab = $('<div class="vax-tab">New function</div>').attr('data-tab', id);
+                var tabId = 'VaxUserFunction-' + id;
+
+                var title = name;
+                var typeParamsStack = ['A', 'B', 'C'];
+                var typeParams = typeParamsStack.slice(0, typeParamsCount);
+
+                if (typeParamsCount > 0)
+                {
+                    title = title + ' [' + typeParams.slice(0, typeParamsCount).join(', ') + ']';
+                }
+
+                var $tab = $('<div class="vax-tab"/>').text(title).attr('data-tab', tabId);
+                var $tabCloser = $('<div class="vax-tab-close">x</div>');
+                $tab.append($tabCloser);
+
+                $tabCloser.click(function()
+                {
+                    self.closeTabId(tabId);
+                });
+
                 this.$tabsWrapper.append($tab);
+
+                this.tabs[tabId] = {
+                    id: tabId,
+                    history: new VaxHistory(self.vaxRoot),
+                    graph: {},
+                    type: 'function',
+                    functionTypeParams: typeParams,
+                    isSaved: false
+                };
+
+                return tabId;
             };
 
-            this.switchToTab = function(tab)
+            this.closeTabId = function(tabId)
             {
-                if (this.currentTab == tab)
+                $('[data-tab="' + tabId + '"]', this.$tabsWrapper).remove();
+                delete this.tabs[tabId];
+
+                this.switchToTab( _.last(_.keys(this.tabs)) );
+            };
+
+            this.openExistingFunctionInTab = function(tabId)
+            {
+
+            };
+
+            this.switchToTab = function(newTabId)
+            {
+                if (this.currentTabId == newTabId)
                 {
                     return;
                 }
+
+                var prevTabId = this.currentTabId;
+
+                // save prev tabId graph
+                this.vaxRoot.selection.clear();
+                if (this.tabs[prevTabId])
+                {
+                    this.tabs[prevTabId].graph = this.vaxRoot.saveGraph();
+                }
+
+                // switch to new graph
+                this.currentTabId = newTabId;
+                this.vaxRoot.history = this.getCurrentTabHistory();
+                this.vaxRoot.loadGraph(this.tabs[newTabId].graph);
+
+                // visual stuff
+                $('.vax-tab', this.vaxRoot.$wrapper).removeClass('vax-tab-is-active');
+                $('.vax-tab[data-tab="' + newTabId + '"]', this.vaxRoot.$wrapper).addClass('vax-tab-is-active');
             };
 
+            this.getCurrentTabHistory = function()
+            {
+                return this.tabs[this.currentTabId].history;
+            };
+
+            this.isCurrentlyFunction = function()
+            {
+                return this.getCurrentTab().type == 'function';
+            };
+
+            this.isCurrentlyBlueprint = function()
+            {
+                return this.getCurrentTab().type == 'blueprint';
+            };
+
+            this.getCurrentTab = function()
+            {
+                return this.tabs[this.currentTabId];
+            };
+
+            this.getCurrentFunctionTypeParams = function()
+            {
+                return this.getCurrentTab().functionTypeParams;
+            };
+
+            this.isCurrentTabSaved = function()
+            {
+                return this.getCurrentTab().isSaved;
+            };
         };
 
         function VaxUserFunctionStorage(vaxRoot)
@@ -2092,6 +2287,12 @@
             this.save = function(id, serializedGraph)
             {
                 window.localStorage.setItem(id, serializedGraph);
+            };
+
+            this.generateNewId = function()
+            {
+                var d = new Date();
+                return d.getTime() + '_' + d.getMilliseconds() + '_' + vax.genNextId();
             };
         };
 
@@ -2182,6 +2383,8 @@
                 var $body = $('<input type="text"/>').val(self.value);
                 self.pickerDlg = self.vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
                 self.pickerDlg.show();
+
+                $('input', self.pickerDlg.$dlg).focus();
 
                 self.pickerDlg.on('ok', function()
                 {
@@ -3051,7 +3254,14 @@
                 {
                     // TODO: handle errors and return them
                     // TODO: if case of nodes/wires/attrs -> show errors as comments on canvas in places of nodes
-                    var nodeConfig = self.cloneComponentConfig(nodePickle.c);
+                    var component = nodePickle.c;
+
+                    if (!component || !self.isComponentAppropriate(component))
+                    {
+                        return;
+                    }
+
+                    var nodeConfig = self.cloneComponentConfig(component);
 
                     if (!nodeConfig)
                     {
@@ -3103,13 +3313,30 @@
                 {
                     var outputNodeId = nodesIdsMap[wirePickle[0]];
                     var outputSocketName = wirePickle[1];
-                    var outputSocketId = self.nodes[outputNodeId].getOutputSocketIdByName(outputSocketName);
+                    var outputNode = self.nodes[outputNodeId];
 
                     var inputNodeId = nodesIdsMap[wirePickle[2]];
                     var inputSocketName = wirePickle[3];
-                    var inputSocketId = self.nodes[inputNodeId].getInputSocketIdByName(inputSocketName);
+                    var inputNode = self.nodes[inputNodeId];
 
-                    self.wire(outputSocketId, inputSocketId);
+                    if (inputNode && outputNode)
+                    {
+                        var inputSocketId = inputNode.getInputSocketIdByName(inputSocketName);
+                        var outputSocketId = outputNode.getOutputSocketIdByName(outputSocketName);
+
+                        if  (inputSocketId && outputSocketId)
+                        {
+                            self.wire(outputSocketId, inputSocketId);
+                        }
+                        else
+                        {
+                            // report error
+                        }
+                    }
+                    else
+                    {
+                        // report error
+                    }
                 });
             }
 
