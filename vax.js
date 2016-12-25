@@ -3334,11 +3334,11 @@
             this.init();
         };
 
-        this.findRootNodes = function()
+        this.findRootNodes = function(graph)
         {
-            return _.filter(this.nodes, function(node)
+            return _.filter(graph.nodes, function(node)
             {
-                return (_.size(node.outputSockets) == 0) ? true : _.every(node.outputSockets, function(socket) { return !socket.isWired(); });
+                return _.every(graph.wires, function(wire) { return wire[0] != node.id; });
             });
         };
 
@@ -3348,7 +3348,16 @@
 
             var graph = self.saveGraph();
 
-            return _.map(this.findRootNodes(), function(rootNode) { return self.composeTreeFromGraph(graph, rootNode.getCompactId()); });
+            return _.map(this.findRootNodes(graph), function(rootNode) { return self.composeTreeFromGraph(graph, rootNode.id); });
+        };
+
+        this.composeTreesInlined = function()
+        {
+            var self = this;
+
+            var inlinedGraph = self.inlineUserFunctionsInGraph(self.saveGraph());
+
+            return _.map(this.findRootNodes(inlinedGraph), function(rootNode) { return self.composeTreeFromGraph(inlinedGraph, rootNode.id); });
         };
 
         this.composeTreeFromGraph = function(graph, rootNodeId)
