@@ -3328,56 +3328,66 @@
 
         this.composeTrees = function()
         {
-            var composeTree = function composeTree(vaxNode, parentsIds, out)
+            var self = this;
+
+            var graph = self.saveGraph();
+
+            return _.map(this.findRootNodes(), function(rootNode) { return self.composeTreeFromGraph(graph, rootNode.getCompactId()); });
+        };
+
+        this.composeTreeFromGraph = function(graph, rootNodeId)
+        {
+            // graph is: nodes, wires
+            var graphNodes = {};
+            var graphLinks = {};
+
+            // let's zip nodes with its' ids
+            _.each(graph.nodes || [], function(node) { graphNodes[node.id] = node; });
+
+            // let's build links
+            _.each(graph.wires || [], function(wire) {
+                var outputNodeId = wire[0];
+                var outputName   = wire[1];
+                var inputNodeId  = wire[2];
+                var inputName    = wire[3];
+
+                graphLinks[inputNodeId] = graphLinks[inputNodeId] || [];
+                graphLinks[inputNodeId].push({in: inputName, link: outputNodeId, out: outputName});
+            });
+
+            var composeTree = function(node, parentsIds, out)
             {
                 parentsIds = parentsIds || [];
 
-                if (_.some(parentsIds, function(pid) { return pid == vaxNode.id;}))
+                if (_.some(parentsIds, function(pid) { return pid == node.id;}))
                 {
-                    throw new Error("Node " + vaxNode.id + " is already present in graph parents: " + parentsIds.join(', '));
+                    throw new Error("Node " + node.id + " is already present in graph parents: " + parentsIds.join(', '));
                 }
 
-                var wiredInputSockets = _.filter(vaxNode.inputSockets, function(socket) { return socket.isWired();});
-
-                // collect attrs
-                var nodeAttrs = {};
-                _.each(vaxNode.attributes, function(attr)
-                {
-                    nodeAttrs[attr.config.name] = attr.value;
-                });
-
-                var newParentsIds = _.union(parentsIds, [vaxNode.id]);
+                // set new parent Ids
+                var newParentsIds = _.union(parentsIds, [node.id]);
 
                 // collect links
-                var links = {};
-                _.each(wiredInputSockets, function(inputSocket) {
-                    var wiresIdsArray = _.keys(inputSocket.wires);
-
-                    if (_.size(wiresIdsArray) !== 1) {
-                        throw new Error("Input socket " + inputSocket.id + " is wired to more than 1 output");
-                    }
-
-                    var wire = vaxRoot.wires[wiresIdsArray[0]];
-
-                    var outputSocket = vaxRoot.sockets[wire.outputSocketId];
-
-
-                    links[inputSocket.config.name] = composeTree(vaxRoot.nodes[outputSocket.node.id], newParentsIds, outputSocket.config.name);
+                var nodeLinks = {};
+                _.each(graphLinks[node.id], function(linkData)
+                {
+                    nodeLinks[linkData.in] = composeTree(graphNodes[linkData.link], newParentsIds, linkData.out);
                 });
 
-                // return node data
-                return {
-                    id: vaxNode.getCompactId(),
-                    c: vaxNode.config.component,
-                    a: nodeAttrs,
-                    links: links,
-                    out: out,
-                    ti: vaxNode.config.typeInstances
-                };
+                // return leaf data
+                var leafData = _.clone(node);
 
+                // delete x,y
+                delete leafData.x;
+                delete leafData.y;
+
+                leafData.links = nodeLinks;
+                leafData.out   = out;
+
+                return leafData;
             };
 
-            return _.map(this.findRootNodes(), function(rootNode) { return composeTree(rootNode); });
+            return composeTree(graphNodes[rootNodeId], []);
         };
 
         this.serializeTrees = function()
