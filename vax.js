@@ -73,13 +73,15 @@
                     "color": "#2f2",
                     "extends": "UF_Outputs"
                 },
+                /*
+                not yet supported
                 "UF_Attributes": {
                     "color": "#f2c"
                 },
                 "UF_Attribute": {
                     "color": "#f2c",
                     "extends": "UF_Attributes"
-                },
+                },*/
                 "UF_Name": {
                     "color": "#f00"
                 },
@@ -149,10 +151,12 @@
                        }
                    },
                    "in": {
-                       "Outputs": "UF_Outputs",
-                       "Attributes": "UF_Attributes"
+                       "Outputs": "UF_Outputs"
+                       // not yet supported: "Attributes": "UF_Attributes"
                    }
                },
+               /*
+               not yet supported
                "UF_Attribute": {
                    "title": "Attribute",
                    "typeParams": [
@@ -173,9 +177,25 @@
                        }
                    },
                    "out": {
-                       "O": "UF_Attributes"
+                       "V": {
+                           "type": "@T",
+                           "title": "Value",
+                       },
+                       "A": "UF_Attributes"
                    }
                },
+                "UF_Attributes": {
+                "title": "Collect attributes",
+                "in": {
+                "A1": "UF_Attributes",
+                "A2": "UF_Attributes",
+                "A3": "UF_Attributes",
+                },
+                "out": {
+                "O": "UF_Attributes"
+                }
+                },
+               */
                "UF_Outputs": {
                    "title": "Collect outputs",
                    "in": {
@@ -184,18 +204,7 @@
                        "O3": "UF_Outputs",
                    },
                    "out": {
-                       "O": "UF_Outputs"
-                   }
-               },
-               "UF_Attributes": {
-                   "title": "Collect attributes",
-                   "in": {
-                       "A1": "UF_Attributes",
-                       "A2": "UF_Attributes",
-                       "A3": "UF_Attributes",
-                   },
-                   "out": {
-                       "O": "UF_Attributes"
+                       "Outputs": "UF_Outputs"
                    }
                }
            };
@@ -666,34 +675,36 @@
                 component.title = root.a.Title;
                 component.color = root.a.Color;
 
-                component.attrs = {};
                 component.in    = {};
                 component.out   = {};
 
                 var walk = function walk(node)
                 {
-                    if (node.c == 'UF_Attribute')
-                    {
-                        component.attrs[node.a.Name] = {
-                            type:    node.ti.T,
-                            title:   node.a.Title,
-                            default: node.a.Default
-                        };
-                    }
-                    else if (node.c == 'UF_Input')
+                    if (node.c == 'UF_Input')
                     {
                         component.in[node.a.Name] = {
-                            type:    node.ti.T,
+                            type:    node.t.T,
                             title:   node.a.Title
                         };
                     }
                     else if (node.c == 'UF_Output')
                     {
                         component.out[node.a.Name] = {
-                            type:    node.ti.T,
+                            type:    node.t.T,
                             title:   node.a.Title
                         };
                     }
+                    /*
+                    not yet supported
+                    else if (node.c == 'UF_Attribute')
+                    {
+                        component.attrs[node.a.Name] = {
+                            type:    node.t.T,
+                            title:   node.a.Title,
+                            default: node.a.Default
+                        };
+                    }
+                    */
 
                     // traverse each link
                     _.each(node.links, function(link)
@@ -852,6 +863,9 @@
 
             // init tabs
             this.tabs.init();
+
+            // load user functions
+            this.userFunctionStorage.loadAll();
 
             // selection handler
             self.$canvas.mousedown(function(e)
@@ -2734,7 +2748,8 @@
                 self.moveContainer.attr({
                     fill: '#000',
                     opacity: .0,
-                    cursor: 'move'
+                    cursor: 'move',
+                    "title": self.id,
                 });
 
                 // create dragging group
@@ -2747,7 +2762,8 @@
                     "font-size": "12pt",
                     "font-weight": "bold",
                     "fill": "#fff",
-                    "text-anchor": "start"
+                    "text-anchor": "start",
+
                 });
                 self.draggingGroup.addText(self.nodeCaption);
 
@@ -2796,7 +2812,7 @@
                 }
 
                 // calc final width of node
-                var widths = [self.nodeCaption.getBBox().width + 20];
+                var widths = [self.nodeCaption.getBBox().width + 20 + (self.isUserFunction() ? 13 : 0)];
                 if (hasTypeParams)
                 {
                     widths.push(self.nodeCaption.getBBox().width + 20);
@@ -3390,6 +3406,145 @@
             return composeTree(graphNodes[rootNodeId], []);
         };
 
+        this.inlineUserFunctionsInGraph = function(graph)
+        {
+            var self = this;
+
+            var userFunctionsIds = [];
+            _.each(self.schema.components, function(component, name)
+            {
+                if (component.isUserFunction)
+                {
+                    userFunctionsIds.push(name);
+                }
+            });
+
+            var ufNodes = _.filter(graph.nodes, function(node) { return _.contains(userFunctionsIds, node.c); });
+
+            var ufCounter = 1;
+            _.each(ufNodes, function(ufNode, ufNodeIndex)
+            {
+                var userFunction = self.userFunctionStorage.get(ufNode.c);
+
+                var ufPrefix = 'uf' + ufCounter + '_';
+                var ufClonedGraph = self.cloneGraphPrefixed(userFunction.graph, ufPrefix);
+
+                // rewire inputs to given ufNode
+                _.each(graph.wires, function(gWire, gWireIndex)
+                {
+                    if (gWire[2] == ufNode.id) // if input is given ufNode
+                    {
+                        var inputName = gWire[3];
+
+                        // so we find an input from ufClonedGraph with given name
+                        var ufInput = _.find(ufClonedGraph.nodes, function(ufNode) { return ufNode.c == 'UF_Input' && ufNode.a.Name == inputName; });
+                        if (ufInput)
+                        {
+                            // we update each wire that out from given UF_Input node
+                            _.each(ufClonedGraph.wires, function(ufWire)
+                            {
+                                if (ufWire[0] == ufInput.id)
+                                {
+                                    gWire[2] = ufWire[2];
+                                    gWire[3] = ufWire[3];
+
+                                    // register cloned wire to delete
+                                    ufWire.push('toDelete');
+                                }
+                            });
+                        }
+                    }
+                    else if (gWire[0] == ufNode.id) // if output is given ufNode
+                    {
+                        var outputName = gWire[1];
+
+                        // so we find an output from ufClonedGraph with given name
+                        var ufOutput = _.find(ufClonedGraph.nodes, function(ufNode) { return ufNode.c == 'UF_Output' && ufNode.a.Name == outputName; });
+                        if (ufOutput)
+                        {
+                            // we update each wire that input from given UF_Output node
+                            _.each(ufClonedGraph.wires, function(ufWire)
+                            {
+                                if (ufWire[2] == ufOutput.id)
+                                {
+                                    gWire[0] = ufWire[0];
+                                    gWire[1] = ufWire[1];
+
+                                    // register cloned wire to delete
+                                    ufWire.push('toDelete');
+                                }
+                            });
+                        }
+                    }
+                });
+
+                // rewire outputs
+
+                // delete system nodes
+                var systemNodesIds = [];
+                _.each(ufClonedGraph.nodes, function(ufNode)
+                {
+                    if (_.contains(['UF_Outputs', 'UF_Function'], ufNode.c))
+                    {
+                        systemNodesIds.push(ufNode.id);
+                    }
+                });
+                ufClonedGraph.nodes = _.reject(ufClonedGraph.nodes, function(ufNode) { return ufNode.c.substr(0, 3) == 'UF_'; });
+
+                // delete system wires
+                ufClonedGraph.wires = _.reject(ufClonedGraph.wires, function(ufWire) { return ufWire[4] == 'delete' || _.contains(systemNodesIds, ufWire[0]) || _.contains(systemNodesIds, ufWire[2]); });
+
+                // delete graph rewired wires
+                graph.wires = _.reject(graph.wires, function(wire) { return wire[4] == 'toDelete'; });
+
+                // delete ufNode by index
+                graph.nodes.splice(ufNodeIndex, 1);
+
+                // merge user function nodes and wires into parent graph
+                _.each(ufClonedGraph.nodes, function(clonedNode)
+                {
+                    graph.nodes.push(clonedNode);
+                });
+                _.each(ufClonedGraph.wires, function(clonedWire)
+                {
+                    graph.wires.push(clonedWire);
+                });
+            });
+
+            return graph;
+        };
+
+        this.cloneGraphPrefixed = function(graph, prefix)
+        {
+            var cloneGraph = {nodes: [], wires: []};
+
+            for (var i = 0, l = graph.nodes.length; i < l; i++)
+            {
+                var nodeClone = _.clone(graph.nodes[i]);
+                nodeClone.id  = prefix + nodeClone.id;
+
+                cloneGraph.nodes.push(nodeClone);
+            }
+
+            for (i = 0, l = graph.wires.length; i < l; ++i)
+            {
+                var wireClone = _.clone(graph.wires[i]);
+                wireClone[0] = prefix + wireClone[0];
+                wireClone[2] = prefix + wireClone[2];
+
+                cloneGraph.wires.push(wireClone);
+            }
+
+            return cloneGraph;
+        };
+
+        this.inlineUserFunctions = function()
+        {
+            var inlineGraph = this.inlineUserFunctionsInGraph(this.saveGraph());
+            window.console.debug(inlineGraph);
+            this.loadGraph(inlineGraph);
+        };
+
         this.serializeTrees = function()
         {
             return JSON.string(this.composeTrees());
@@ -3442,10 +3597,14 @@
 
             // gather everything in a blueprint
             return {
-                version: "0.1",
                 nodes: nodesPickles,
                 wires: wiresPickles
             };
+        };
+
+        this.serializeGraph = function()
+        {
+            return JSON.stringify(this.saveGraph());
         };
 
         this.getNodesByIds = function(nodesIds)

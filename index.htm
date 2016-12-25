@@ -51,7 +51,10 @@
         var tabId = myVAX.tabs.createNewFunctionTab(funcId, 'TestF', 1);
         myVAX.tabs.switchToTab(tabId);
         myVAX.loadGraph(uf);*/
-        myVAX.userFunctionStorage.loadAll();
+
+
+        var bp = {"version":"0.1","nodes":[{"id":61,"c":"vax_uf_1482676855372_372_10","x":695,"y":304},{"id":64,"c":"GatherColumns","x":945,"y":350},{"id":72,"c":"Tbl_Order","x":470,"y":242,"a":{"Alias":"o"}}],"wires":[[61,"O",64,"A"],[72,"O",61,"I"]]};4
+        myVAX.loadGraph(bp);
 
         // eval
         $('#eval').click(function()
