@@ -85,6 +85,9 @@
                 },
                 "UF_String": {
                     "color": "#f6a"
+                },
+                "UF_Color": {
+                    "color": "#fa6"
                 }
             };
         },
@@ -140,6 +143,10 @@
                            "type": "UF_String",
                            "default": "Node"
                        },
+                       "Color": {
+                           "type": "UF_Color",
+                           "default": "0-#495-#075"
+                       }
                    },
                    "in": {
                        "Outputs": "UF_Outputs",
@@ -166,7 +173,7 @@
                        }
                    },
                    "out": {
-                       "A": "UF_Attributes"
+                       "O": "UF_Attributes"
                    }
                },
                "UF_Outputs": {
@@ -333,6 +340,18 @@
             var isSimpleOutputType = !_.isObject(outputType);
             var isSimpleInputType  = !_.isObject(inputType);
 
+            // support type params in functions
+            if (isSimpleInputType && inputType.substr(0, 1) === '@')
+            {
+                return outputType === inputType;
+            }
+
+            if (isSimpleOutputType && outputType.substr(0, 1) === '@')
+            {
+                return inputType === 'Any' || inputType === outputType;
+            }
+
+            // go on with real types
             if (isSimpleInputType && isSimpleOutputType) // both simple
             {
                 return (inputType === outputType) || _.some(vaxRoot.schema.types[outputType].extends, function(extType) { return extType == inputType;});
@@ -469,54 +488,69 @@
 
             _.each(componentsConfig, function(componentConfig, name)
             {
-                var component = _.defaults(componentConfig, {
-                    component: name,
-                    title: name,
-                    color: "0-#490-#070:20-#333",
-                    typeParams: [],
-                    inputSockets: [],
-                    attributes: [],
-                    outputSockets: [],
-                    typeInstances: {}
-                });
-
-                component.color = self.resolveColor(component.color);
-
-                var mapSubConfig = function(subConfig, name)
-                {
-                    if (_.isString(subConfig))
-                    {
-                        subConfig = {type: subConfig};
-                    }
-
-                    var sub = _.defaults(subConfig, {
-                        color: '#fff',
-                        name: name,
-                        title: name,
-                        type: 'Any',
-                        default: ''
-                    });
-
-                    var parsedType = vax.parseType(sub.type);
-                    if (!vaxRoot.isValidType(parsedType))
-                    {
-                        throw new Error("Invalid type: " + sub.type);
-                    }
-
-                    sub.parsedType = parsedType;
-                    sub.color = vaxRoot.getColorOfParsedType(parsedType);
-
-                    return sub;
-                };
-
-                component.inputSockets  = _.map(componentConfig.in    || {}, mapSubConfig);
-                component.outputSockets = _.map(componentConfig.out   || {}, mapSubConfig);
-                component.attributes    = _.map(componentConfig.attrs || {}, mapSubConfig);
-
-                components[name] = component;
+                components[name] = self.buildComponentConfig(componentConfig, name);
             });
 
             return components;
+        };
+
+        this.buildComponentConfig = function(componentConfig, name, userFunctionData)
+        {
+            var self = this;
+
+            var isUserFunction = !!userFunctionData;
+
+            var component = _.defaults(componentConfig, {
+                component: name,
+                isUserFunction: isUserFunction,
+                title: name,
+                color: "0-#490-#070:20-#333",
+                typeParams: [],
+                inputSockets: [],
+                attributes: [],
+                outputSockets: [],
+                typeInstances: {}
+            });
+
+            if (isUserFunction)
+            {
+                component.userFunction = userFunctionData;
+            }
+
+            component.color = self.resolveColor(component.color);
+
+            var mapSubConfig = function(subConfig, name)
+            {
+                if (_.isString(subConfig))
+                {
+                    subConfig = {type: subConfig};
+                }
+
+                var sub = _.defaults(subConfig, {
+                    color: '#fff',
+                    name: name,
+                    title: name,
+                    type: 'Any',
+                    default: ''
+                });
+
+                var parsedType = vax.parseType(sub.type);
+                if (!vaxRoot.isValidType(parsedType))
+                {
+                    throw new Error("Invalid type: " + sub.type);
+                }
+
+                sub.parsedType = parsedType;
+                sub.color = vaxRoot.getColorOfParsedType(parsedType);
+
+                return sub;
+            };
+
+            component.inputSockets  = _.map(componentConfig.in    || {}, mapSubConfig);
+            component.outputSockets = _.map(componentConfig.out   || {}, mapSubConfig);
+            component.attributes    = _.map(componentConfig.attrs || {}, mapSubConfig);
+
+            return component;
         };
 
         this.isComponentAppropriate = function(component)
@@ -598,6 +632,92 @@
             }
 
             return type.color;
+        };
+
+        this.compileUserFunction = function(config)
+        {
+            var self = this;
+
+            if (!config.id)
+            {
+                throw new Error('Id is empty');
+            }
+
+            var trees      = config.trees || {};
+            var graph      = config.graph || {};
+            var typeParams = config.typeParams || {};
+
+            var component = {};
+
+            if (typeParams)
+            {
+                component.typeParams = typeParams;
+            }
+
+            if (trees.length && trees.length == 1)
+            {
+                var root = trees[0];
+                if (root.c !== 'UF_Function')
+                {
+                    alert("Root node should be UF_Function!");
+                    return false;
+                }
+
+                component.title = root.a.Title;
+                component.color = root.a.Color;
+
+                component.attrs = {};
+                component.in    = {};
+                component.out   = {};
+
+                var walk = function walk(node)
+                {
+                    if (node.c == 'UF_Attribute')
+                    {
+                        component.attrs[node.a.Name] = {
+                            type:    node.ti.T,
+                            title:   node.a.Title,
+                            default: node.a.Default
+                        };
+                    }
+                    else if (node.c == 'UF_Input')
+                    {
+                        component.in[node.a.Name] = {
+                            type:    node.ti.T,
+                            title:   node.a.Title
+                        };
+                    }
+                    else if (node.c == 'UF_Output')
+                    {
+                        component.out[node.a.Name] = {
+                            type:    node.ti.T,
+                            title:   node.a.Title
+                        };
+                    }
+
+                    // traverse each link
+                    _.each(node.links, function(link)
+                    {
+                        walk(link);
+                    });
+                };
+
+                // build component config
+                walk(root);
+
+                // build component & register in current schema
+                self.schema.components[config.id] = self.buildComponentConfig(component, config.id, {id: config.id, name: config.name});
+
+                // save in repo
+                self.userFunctionStorage.save(config.id, config.name, component, graph);
+
+                return component;
+            }
+            else
+            {
+                alert('There should be exactly one tree root');
+                return false;
+            }
         };
 
         this.schema.colors     = this.buildSchemaColors(this.config.schema);
@@ -715,8 +835,12 @@
                     {
                         self.clipboard.cut();
                     }
-                }
 
+                    if (evt.keyCode == 69) // Ctrl + E
+                    {
+                        self.tabs.compileUserFunction();
+                    }
+                }
             });
 
             // draw scrollbars
@@ -1065,7 +1189,7 @@
                         var $typePicker = $('<div class="vax-type-picker"/>').text(typeAlias + ' = ').attr('data-type-alias', typeAlias).attr('data-type-signature', 'Any');
                         var $typePickerSelect = $('<select class="vax-type-picker-select vax-chosen" data-type-n="1"/>');
 
-                        _.each([self.tabs.getCurrentFunctionTypeParams(), self.schema.types], function(types)
+                        _.each([self.tabs.getCurrentFunctionTypeParamsForPicker(), self.schema.types], function(types)
                         {
                             _.each(types, function(type, name)
                             {
@@ -1099,6 +1223,9 @@
                     // append to selector body
                     $selectorBody.append($allTypes);
                     $('.vax-chosen', $allTypes).chosen({});
+
+                    // force serialization of a selected type
+                    $('select', $allTypes).change();
                 }
                 self.selectorDlg.center();
             });
@@ -1184,6 +1311,7 @@
                 var nodeConfig = self.cloneComponentConfig(component);
                 nodeConfig.x = self.newNodeX;
                 nodeConfig.y = self.newNodeY;
+
 
                 _.each($('.vax-type-picker'), function(el)
                 {
@@ -2145,6 +2273,7 @@
                     history: new VaxHistory(vaxRoot),
                     graph: {},
                     type: 'blueprint',
+                    functionName: null,
                     functionTypeParams: [],
                     isSaved: false
                 }
@@ -2167,7 +2296,7 @@
 
             this.createNewFunctionTab = function(id, name, typeParamsCount)
             {
-                var tabId = 'VaxUserFunction-' + id;
+                var tabId = id;
 
                 var title = name;
                 var typeParamsStack = ['A', 'B', 'C'];
@@ -2194,6 +2323,7 @@
                     history: new VaxHistory(self.vaxRoot),
                     graph: {},
                     type: 'function',
+                    functionName: name,
                     functionTypeParams: typeParams,
                     isSaved: false
                 };
@@ -2209,9 +2339,46 @@
                 this.switchToTab( _.last(_.keys(this.tabs)) );
             };
 
-            this.openExistingFunctionInTab = function(tabId)
+            this.openExistingFunctionInTab = function(userFunctionId)
             {
+                if (userFunctionId in this.tabs)
+                {
+                    this.switchToTab(userFunctionId);
+                }
+                else
+                {
+                    var uf = this.vaxRoot.userFunctionStorage.get(userFunctionId);
+                    if (uf)
+                    {
+                        var typeParamsCount = 0;
+                        if (uf.component.typeParams && uf.component.typeParams.length)
+                        {
+                            typeParamsCount = uf.component.typeParams.length;
+                        }
 
+                        this.createNewFunctionTab(userFunctionId, uf.name, typeParamsCount);
+                        this.switchToTab(userFunctionId);
+                        this.vaxRoot.appendGraph(uf.graph);
+                    }
+                }
+            };
+
+            this.compileUserFunction = function()
+            {
+                var self = this;
+
+                if (this.isCurrentlyFunction())
+                {
+                    var currentTab = this.getCurrentTab();
+
+                    var functionComponent = this.vaxRoot.compileUserFunction({
+                        id: currentTab.id,
+                        name: currentTab.functionName,
+                        trees: this.vaxRoot.composeTrees(),
+                        graph: self.vaxRoot.saveGraph(),
+                        typeParams: currentTab.functionTypeParams
+                    });
+                }
             };
 
             this.switchToTab = function(newTabId)
@@ -2227,7 +2394,7 @@
                 this.vaxRoot.selection.clear();
                 if (this.tabs[prevTabId])
                 {
-                    this.tabs[prevTabId].graph = this.vaxRoot.saveGraph();
+                    var gr = this.tabs[prevTabId].graph = this.vaxRoot.saveGraph();
                 }
 
                 // switch to new graph
@@ -2265,6 +2432,14 @@
                 return this.getCurrentTab().functionTypeParams;
             };
 
+            this.getCurrentFunctionTypeParamsForPicker = function()
+            {
+                var types = {};
+                _.each(this.getCurrentTab().functionTypeParams, function(name) { name = '@' + name; types[name] = {extends: 'Any'};});
+
+                return types;
+            };
+
             this.isCurrentTabSaved = function()
             {
                 return this.getCurrentTab().isSaved;
@@ -2275,24 +2450,71 @@
         {
             var self = this;
 
+            this.functions = {};
+
             if (!(vaxRoot instanceof VAX)) {
                 throw new Error("Instance of VAX was expected");
             }
 
+            this.vaxRoot = vaxRoot;
+
             this.loadAll = function()
             {
+                for (var k in window.localStorage)
+                {
+                    if (window.localStorage.hasOwnProperty(k))
+                    {
+                        if (k.substr(0, 7) == 'vax_uf_')
+                        {
+                            try {
+                                var uf = JSON.parse(localStorage[k]);
+                            }
+                            catch (e)
+                            {
+                                window.console.debug("Couldn't parse json for id: " + k, localStorage[k], e);
+                            }
 
+                            if (uf && uf.component && uf.graph)
+                            {
+                                var ufId = uf.id = k;
+                                uf.name = uf.name || ufId;
+
+                                this.functions[ufId] = uf;
+
+                                this.vaxRoot.schema.components[ufId] = this.vaxRoot.buildComponentConfig(uf.component, uf.component.name, {id: ufId, name: uf.name});
+                            }
+                        }
+                    }
+                }
             };
 
-            this.save = function(id, serializedGraph)
+            this.save = function(id, name, componentConfig, graph)
             {
-                window.localStorage.setItem(id, serializedGraph);
+                var uf = {id: id, name: name, component: componentConfig, graph: graph};
+                this.functions[id] = uf;
+
+                window.localStorage.setItem(id, JSON.stringify(uf));
+            };
+
+            this.getAll = function()
+            {
+                return this.functions;
+            };
+
+            this.get = function(id)
+            {
+                return this.functions[id];
+            };
+
+            this.has = function(c)
+            {
+                return (c in this.functions);
             };
 
             this.generateNewId = function()
             {
                 var d = new Date();
-                return d.getTime() + '_' + d.getMilliseconds() + '_' + vax.genNextId();
+                return 'vax_uf_' + d.getTime() + '_' + d.getMilliseconds() + '_' + vax.genNextId(); // add some session user prefix so they never collapseroni
             };
         };
 
@@ -2312,7 +2534,7 @@
                 color: "#fff",
                 name: "A",
                 title: "Attr",
-                default: "",
+                default: ""
             });
             this.value = this.config.default;
 
@@ -2436,6 +2658,7 @@
             this.config = _.defaults(config, {
                 title: "Node",
                 component: null,
+                isUserFunction: false,
                 width: 100,
                 height: 100,
                 color: "0-#490-#070:20-#333", // vaxRoot.config.ui.defaultNodeColor
@@ -2622,13 +2845,35 @@
                 _.each(self.inputSockets, function(socket) { socket.alignToNodeWidth(); socket.attachToNodeDraggingGroup(); });
                 _.each(self.outputSockets, function(socket) { socket.alignToNodeWidth(); socket.attachToNodeDraggingGroup(); });
 
+                // add userFunction marker if needed
+                if (self.isUserFunction())
+                {
+                    self.userFunctionMarker = raphael.text(self.config.x + nodeWidth - 10, self.config.y + 15, "f");
+                    self.userFunctionMarker.attr({
+                        "text-anchor": "end",
+                        "title": "This node is a user function",
+                        "fill": "#ff0",
+                        "font-size": "16",
+                        "cursor": "help",
+                        'font-weight':"bold",
+                    });
+                    self.draggingGroup.addText(self.userFunctionMarker);
+                }
+
                 // refresh scrollbars sliders
                 vaxRoot.refreshScrollSliders();
 
                 // remove selection on 2x click
                 self.moveContainer.dblclick(function()
                 {
-                    self.getVAX().selection.removeSelectedElements();
+                    if (self.isUserFunction())
+                    {
+                        self.getVAX().tabs.openExistingFunctionInTab(self.config.userFunction.id);
+                    }
+                    else
+                    {
+                        self.getVAX().selection.removeSelectedElements();
+                    }
                 });
 
                 // dragging group handlers
@@ -2799,6 +3044,11 @@
 
             this.getY = function () {
                 return self.moveContainer.attr("y");
+            };
+
+            this.isUserFunction = function()
+            {
+                return this.config.isUserFunction;
             };
 
             this.getInputSocketsCount = function()
