@@ -3406,31 +3406,40 @@
             return composeTree(graphNodes[rootNodeId], []);
         };
 
-        this.inlineUserFunctionsInGraph = function(graph)
+        this.inlineUserFunctionsInGraph = function(graph, userFunctionsIds, ufCounter)
         {
             var self = this;
 
-            var userFunctionsIds = [];
-            _.each(self.schema.components, function(component, name)
+            if (!userFunctionsIds)
             {
-                if (component.isUserFunction)
+                userFunctionsIds = [];
+                _.each(self.schema.components, function(component, name)
                 {
-                    userFunctionsIds.push(name);
-                }
-            });
+                    if (component.isUserFunction)
+                    {
+                        userFunctionsIds.push(name);
+                    }
+                });
+            }
 
             var ufNodes = _.filter(graph.nodes, function(node) { return _.contains(userFunctionsIds, node.c); });
 
-            var ufCounter = 1;
-            _.each(ufNodes, function(ufNode, ufNodeIndex)
+            if (!ufNodes.length) // no user functions spotted, we're cool
             {
+                return graph;
+            }
+
+            _.each(ufNodes, function(ufNode)
+            {
+                ufCounter = (ufCounter || 1) + 1;
+
                 var userFunction = self.userFunctionStorage.get(ufNode.c);
 
                 var ufPrefix = 'uf' + ufCounter + '_';
                 var ufClonedGraph = self.cloneGraphPrefixed(userFunction.graph, ufPrefix);
 
-                // rewire inputs to given ufNode
-                _.each(graph.wires, function(gWire, gWireIndex)
+                // rewire
+                _.each(graph.wires, function(gWire)
                 {
                     if (gWire[2] == ufNode.id) // if input is given ufNode
                     {
@@ -3478,13 +3487,11 @@
                     }
                 });
 
-                // rewire outputs
-
                 // delete system nodes
                 var systemNodesIds = [];
                 _.each(ufClonedGraph.nodes, function(ufNode)
                 {
-                    if (_.contains(['UF_Outputs', 'UF_Function'], ufNode.c))
+                    if (ufNode.c.substr(0, 3) == 'UF_')
                     {
                         systemNodesIds.push(ufNode.id);
                     }
@@ -3492,13 +3499,13 @@
                 ufClonedGraph.nodes = _.reject(ufClonedGraph.nodes, function(ufNode) { return ufNode.c.substr(0, 3) == 'UF_'; });
 
                 // delete system wires
-                ufClonedGraph.wires = _.reject(ufClonedGraph.wires, function(ufWire) { return ufWire[4] == 'delete' || _.contains(systemNodesIds, ufWire[0]) || _.contains(systemNodesIds, ufWire[2]); });
+                ufClonedGraph.wires = _.reject(ufClonedGraph.wires, function(ufWire) { return ufWire[4] == 'toDelete' || _.contains(systemNodesIds, ufWire[0]) || _.contains(systemNodesIds, ufWire[2]); });
 
                 // delete graph rewired wires
                 graph.wires = _.reject(graph.wires, function(wire) { return wire[4] == 'toDelete'; });
 
-                // delete ufNode by index
-                graph.nodes.splice(ufNodeIndex, 1);
+                // delete ufNode itself
+                graph.nodes = _.reject(graph.nodes, function(node) { return node.id == ufNode.id; });
 
                 // merge user function nodes and wires into parent graph
                 _.each(ufClonedGraph.nodes, function(clonedNode)
@@ -3511,7 +3518,18 @@
                 });
             });
 
-            return graph;
+            // check if we've introduced new user functions by inlining
+            ufNodes = _.filter(graph.nodes, function(node) { return _.contains(userFunctionsIds, node.c); });
+
+            if (!ufNodes.length) // no user functions spotted, we're cool
+            {
+                return graph;
+            }
+            else
+            {
+                // repeat until we have no user functions left
+                return this.inlineUserFunctionsInGraph(graph, userFunctionsIds, ufCounter);
+            }
         };
 
         this.cloneGraphPrefixed = function(graph, prefix)
@@ -3541,8 +3559,9 @@
         this.inlineUserFunctions = function()
         {
             var inlineGraph = this.inlineUserFunctionsInGraph(this.saveGraph());
-            window.console.debug(inlineGraph);
             this.loadGraph(inlineGraph);
+
+            return inlineGraph;
         };
 
         this.serializeTrees = function()
