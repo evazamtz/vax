@@ -6,6 +6,7 @@ colors:
 
 types:
   # [Any] type is considered as super type
+  String:
   Relation:
     color: @relation
   Exprs:
@@ -115,7 +116,7 @@ components:
         default: 1 # should map value title from picker ->
         valuePicker: # support customer picker somehow -> one of them is dict picker --<#>--
           type: dictionary # default --> <--- vax.pickers.default, vax.pickers.dictionary -> <- , vx.pickers.custom ?
-          dict: OperTypes
+          dictionary: OperTypes
 
   Tbl_Order:
     title: "Тбл.Заказ"

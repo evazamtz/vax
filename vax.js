@@ -210,15 +210,6 @@
            };
         },
 
-        valuePickers: {
-            default:    null,
-            dictionary: null
-        },
-
-        registerValuePicker: function(type, valuePicker)
-        {
-            this.valuePickers[type] = valuePicker;
-        }
 
     }); // vax.extend
 
@@ -304,6 +295,17 @@
 
         // create user function storage
         this.userFunctionStorage = new VaxUserFunctionStorage(this);
+
+        // create valuePickers
+        this.valuePickers = {
+            default:    new VaxDefaultValuePicker(this),
+            dictionary: new VaxDictionaryValuePicker(this)
+        };
+
+        this.registerValuePicker = function(type, valuePicker)
+        {
+            this.valuePickers[type] = valuePicker;
+        };
 
         // setting states of down-move-up operations
         this.isDragging  = false;
@@ -741,9 +743,10 @@
             }
         };
 
-        this.schema.colors     = this.buildSchemaColors(this.config.schema);
-        this.schema.types      = this.buildSchemaTypes(this.config.schema);
-        this.schema.components = this.buildSchemaComponents(this.config.schema, this.schema.types);
+        this.schema.colors       = this.buildSchemaColors(this.config.schema);
+        this.schema.types        = this.buildSchemaTypes(this.config.schema);
+        this.schema.dictionaries = this.config.schema.dictionaries || {};
+        this.schema.components   = this.buildSchemaComponents(this.config.schema, this.schema.types);
 
         this.nodes = {};
         this.sockets = {};
@@ -2558,9 +2561,12 @@
                 color: "#fff",
                 name: "A",
                 title: "Attr",
-                default: ""
+                default: "",
+                valuePicker: {type: 'default'}
             });
             this.value = this.config.default;
+
+            this.valuePicker = self.vaxRoot.valuePickers[self.config.valuePicker.type]; // TODO: more error checks
 
             this.createCaption = function()
             {
@@ -2598,7 +2604,7 @@
 
                 var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
-                self.valueHolder = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35, self.value);
+                self.valueHolder = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35, self.getValueTitle(self.value));
                 self.valueHolder.attr('text-anchor', 'start');
 
                 self.valueHolder.attr({
@@ -2612,6 +2618,12 @@
                 this.node.getDraggingGroup().addText(self.valueHolder);
             };
 
+            this.getValueTitle = function(value)
+            {
+                return this.valuePicker.getValueTitle(value, this.config.valuePicker);
+
+            };
+
             this.getBoundingBoxWidth = function()
             {
                 return Math.max(this.valueHolder.getBBox().width, this.caption.getBBox().width + 20);
@@ -2621,15 +2633,13 @@
             {
                 var self = this;
 
-                var valuePicker = new VaxDictionaryValuePicker(); // vax.valuePickers.dictionary; // TODO: get from schema
-
                 var callback = function(value)
                 {
                     self.value = value;
-                    self.valueHolder.attr("text", valuePicker.getValueTitle(value));
+                    self.valueHolder.attr("text", self.getValueTitle(value));
                 };
 
-                valuePicker.invoke(self.vaxRoot, self.value, callback, {}); // TODO: pass options
+                self.valuePicker.invoke(self.value, callback, self.config.valuePicker);
             };
 
             this.init = function () {
@@ -3327,14 +3337,15 @@
             this.init();
         };
 
-        function VaxDefaultValuePicker()
+        // value pickers classes
+        function VaxDefaultValuePicker(vaxRoot)
         {
             this.getValueTitle = function(value, options)
             {
                 return value;
             };
 
-            this.invoke = function(options, value, callback)
+            this.invoke = function(value, callback, options)
             {
                 var self = this;
 
@@ -3343,9 +3354,9 @@
                     return;
                 }
 
-                var $body = $('<input type="text"/>').val(value)
+                var $body = $('<input type="text"/>').val(value);
 
-                self.pickerDlg = self.vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+                self.pickerDlg = vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
                 self.pickerDlg.show();
 
                 $('input,select', self.pickerDlg.$dlg).focus();
@@ -3368,14 +3379,19 @@
             };
         };
 
-        function VaxDictionaryValuePicker()
+        function VaxDictionaryValuePicker(vaxRoot)
         {
-            this.getValueTitle = function(value, options)
+            this.getDictionary = function(options)
             {
-                return value; // TODO: use schema
+                return vaxRoot.schema.dictionaries[options.dictionary];
             };
 
-            this.invoke = function(vaxRoot, value, callback, options)
+            this.getValueTitle = function(value, options)
+            {
+                return this.getDictionary(options).values[value];
+            };
+
+            this.invoke = function(value, callback, options)
             {
                 var self = this;
 
@@ -3386,8 +3402,7 @@
 
                 var $select = $('<select style="width: 100%;" class="vax-chosen"/>');
 
-                // fill with values
-                var dict = {1: "Вручение", 2: "Возврат"}; // TODO: get from schema
+                var dict = self.getDictionary(options).values;
 
                 for (var k in dict)
                 {
@@ -3423,8 +3438,9 @@
                     delete self.pickerDlg;
                 });
             };
-        }
+        };
 
+        // === Working with graphs/trees
         this.findRootNodes = function(graph)
         {
             return _.filter(graph.nodes, function(node)
@@ -3887,5 +3903,5 @@
     } // function VAX
 
     window.VAX = VAX;
-}
+    }
 )(window, _, jQuery);
