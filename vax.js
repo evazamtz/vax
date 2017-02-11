@@ -3522,7 +3522,7 @@
             return composeTree(graphNodes[rootNodeId], []);
         };
 
-        this.inlineUserFunctionsInGraph = function(graph, userFunctionsIds, ufCounter)
+        this.inlineUserFunctionsInGraph = function(graph, userFunctionsIds)
         {
             var self = this;
 
@@ -3547,11 +3547,9 @@
 
             _.each(ufNodes, function(ufNode)
             {
-                ufCounter = (ufCounter || 1) + 1;
-
                 var userFunction = self.userFunctionStorage.get(ufNode.c);
 
-                var ufPrefix = 'uf' + ufCounter + '_';
+                var ufPrefix = 'uf' + window.vax.genNextId() + '_';
                 var ufClonedGraph = self.cloneGraphPrefixed(userFunction.graph, ufPrefix);
 
                 // rewire
@@ -3644,7 +3642,7 @@
             else
             {
                 // repeat until we have no user functions left
-                return this.inlineUserFunctionsInGraph(graph, userFunctionsIds, ufCounter);
+                return this.inlineUserFunctionsInGraph(graph, userFunctionsIds);
             }
         };
 
