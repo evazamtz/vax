@@ -90,7 +90,33 @@ types:
     extends: Table
     color: @relation
 
+
+dictionaries:
+  JoinType:
+    title: Виды JOINов
+    values:
+      left: LEFT
+      right: RIGHT
+
+  OperTypes:
+    title: Типа операций
+    values:
+      1: Вручение адресату
+      2: Возврат
+      3: В пути
+
+
 components:
+  Tbl_Dict:
+    title: "Выбор из словаря"
+    attrs:
+      OperType:
+        type: String
+        default: 1 # should map value title from picker ->
+        valuePicker: # support customer picker somehow -> one of them is dict picker --<#>--
+          type: dictionary # default --> <--- vax.pickers.default, vax.pickers.dictionary -> <- , vx.pickers.custom ?
+          dict: OperTypes
+
   Tbl_Order:
     title: "Тбл.Заказ"
     attrs:

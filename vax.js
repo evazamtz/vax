@@ -208,6 +208,16 @@
                    }
                }
            };
+        },
+
+        valuePickers: {
+            default:    null,
+            dictionary: null
+        },
+
+        registerValuePicker: function(type, valuePicker)
+        {
+            this.valuePickers[type] = valuePicker;
         }
 
     }); // vax.extend
@@ -2611,32 +2621,15 @@
             {
                 var self = this;
 
-                if (self.pickerDlg)
+                var valuePicker = new VaxDictionaryValuePicker(); // vax.valuePickers.dictionary; // TODO: get from schema
+
+                var callback = function(value)
                 {
-                    return;
-                }
+                    self.value = value;
+                    self.valueHolder.attr("text", valuePicker.getValueTitle(value));
+                };
 
-                var $body = $('<input type="text"/>').val(self.value);
-                self.pickerDlg = self.vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
-                self.pickerDlg.show();
-
-                $('input', self.pickerDlg.$dlg).focus();
-
-                self.pickerDlg.on('ok', function()
-                {
-                    var newValue = $body.val();
-                    self.value = newValue;
-                    self.valueHolder.attr("text", newValue);
-
-                    self.pickerDlg.destroy();
-                    delete self.pickerDlg;
-                });
-
-                self.pickerDlg.on('cancel', function()
-                {
-                    self.pickerDlg.destroy();
-                    delete self.pickerDlg;
-                });
+                valuePicker.invoke(self.vaxRoot, self.value, callback, {}); // TODO: pass options
             };
 
             this.init = function () {
@@ -3333,6 +3326,104 @@
 
             this.init();
         };
+
+        function VaxDefaultValuePicker()
+        {
+            this.getValueTitle = function(value, options)
+            {
+                return value;
+            };
+
+            this.invoke = function(options, value, callback)
+            {
+                var self = this;
+
+                if (self.pickerDlg)
+                {
+                    return;
+                }
+
+                var $body = $('<input type="text"/>').val(value)
+
+                self.pickerDlg = self.vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+                self.pickerDlg.show();
+
+                $('input,select', self.pickerDlg.$dlg).focus();
+
+                self.pickerDlg.on('ok', function()
+                {
+                    var newValue = $body.val();
+
+                    callback(newValue);
+
+                    self.pickerDlg.destroy();
+                    delete self.pickerDlg;
+                });
+
+                self.pickerDlg.on('cancel', function()
+                {
+                    self.pickerDlg.destroy();
+                    delete self.pickerDlg;
+                });
+            };
+        };
+
+        function VaxDictionaryValuePicker()
+        {
+            this.getValueTitle = function(value, options)
+            {
+                return value; // TODO: use schema
+            };
+
+            this.invoke = function(vaxRoot, value, callback, options)
+            {
+                var self = this;
+
+                if (self.pickerDlg)
+                {
+                    return;
+                }
+
+                var $select = $('<select style="width: 100%;" class="vax-chosen"/>');
+
+                // fill with values
+                var dict = {1: "Вручение", 2: "Возврат"}; // TODO: get from schema
+
+                for (var k in dict)
+                {
+                    var $option = $('<option/>').attr('value', k).text(dict[k]);
+                    if (k == value)
+                    {
+                        $option.attr('checked', 'checked');
+                    }
+
+                    $select.append($option);
+                }
+
+                self.pickerDlg = vaxRoot.ui.createDialog({header: 'Select value', body: $select, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
+                self.pickerDlg.show();
+
+                $select.chosen({});
+
+                $('select', self.pickerDlg.$dlg).focus();
+
+                self.pickerDlg.on('ok', function()
+                {
+                    var newValue = $select.val();
+
+                    callback(newValue);
+
+                    self.pickerDlg.destroy();
+                    delete self.pickerDlg;
+                });
+
+                self.pickerDlg.on('cancel', function()
+                {
+                    self.pickerDlg.destroy();
+                    delete self.pickerDlg;
+                });
+            };
+        }
 
         this.findRootNodes = function(graph)
         {
