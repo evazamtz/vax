@@ -4091,6 +4091,11 @@
             {
                 node.remove();
             });
+
+            _.each(this.comments, function(comment)
+            {
+                comment.remove();
+            });
         };
 
         this.loadGraph = function(graph)

@@ -8,8 +8,12 @@ var vaxSchema = {
     "types": {
         "Int": null,
         "String": null,
-        "Relation": {
+        "FromClause": {
             "color": "@relation"
+        },
+        "Relation": {
+            "color": "@relation",
+            "extends": "FromClause"
         },
         "WindowClause": {
             "color": "@relation"
@@ -213,9 +217,33 @@ var vaxSchema = {
         "Tbl_LegalEntity": {
             "extends": "Table",
             "color": "@relation"
+        },
+        "Tbl_Claim": {
+            "extends": "Table",
+            "color": "@relation"
+        },
+        "Tbl_ClaimOrder": {
+            "extends": "Table",
+            "color": "@relation"
+        },
+        "Tbl_ClaimTicketReply": {
+            "extends": "Table",
+            "color": "@relation"
+        },
+        "Tbl_OrderTrackInformation": {
+            "extends": "Table",
+            "color": "@relation"
         }
     },
     "dictionaries": {
+        "JoinTypes": {
+            "title": "Типы соединений таблиц",
+            "values": {
+                "INNER": "INNER",
+                "LEFT": "LEFT",
+                "RIGHT": "RIGHT"
+            }
+        },
         "AggregateTypes": {
             "title": "Типы аггрегатных функций",
             "values": {
@@ -238,12 +266,15 @@ var vaxSchema = {
         "core": "Основные элементы",
         "agg": "Аггрегаты",
         "bool": "Логические элементы",
+        "cmp": "Сравнения",
         "datetime": "Работа с датой",
         "expr": "Выражения",
         "literal": "Литералы",
         "tables": "Таблицы",
         "TblOrder": "Заказ",
-        "TblLegalEntity": "ЮрЛицо"
+        "TblLegalEntity": "ЮрЛицо",
+        "TblClaim": "Претензия",
+        "TblOrderTrackInformation": "Трекинг заказа"
     },
     "components": {
         "Select": {
@@ -252,7 +283,7 @@ var vaxSchema = {
             "color": "0-#495-#075:20-#335",
             "in": {
                 "Cols": "Exprs",
-                "FROM": "Relation",
+                "FROM": "FromClause",
                 "WHERE": "BooleanExpr",
                 "ORDER": "OrderByColumns",
                 "GROUP": "Exprs",
@@ -288,18 +319,12 @@ var vaxSchema = {
             "title": "Smart JOIN",
             "color": "0-#495-#075:20-#335",
             "in": {
-                "Prev": "Relation",
+                "Prev": "FromClause",
                 "L": "Relation",
                 "R": "Relation",
-                "ON": "BooleanExpr"
-            },
-            "attrs": {
-                "Type": {
-                    "default": "INNER"
-                }
             },
             "out": {
-                "O": "Relation"
+                "O": "FromClause"
             }
         },
         "PlainJoin": {
@@ -307,17 +332,22 @@ var vaxSchema = {
             "title": "JOIN",
             "color": "0-#495-#075:20-#335",
             "in": {
+                "Prev": "FromClause",
                 "L": "Relation",
                 "R": "Relation",
                 "ON": "BooleanExpr"
             },
             "attrs": {
                 "Type": {
-                    "default": "INNER"
+                    "default": "INNER",
+                    "valuePicker": {
+                        "type": "dictionary",
+                        "dictionary": "JoinTypes"
+                    }
                 }
             },
             "out": {
-                "O": "Relation"
+                "O": "FromClause"
             }
         },
         "Table": {
@@ -381,35 +411,53 @@ var vaxSchema = {
                 }
             }
         },
-        "GatherColumns": {
+        "Gather3Columns": {
             "group": "core",
-            "title": "Gather columns",
+            "title": "Gather 3 columns",
             "color": "0-#32a-#0a5:40-#03a",
             "in": {
-                "A": {
-                    "title": 1,
-                    "type": "Expr"
-                },
-                "B": {
-                    "title": 2,
-                    "type": "Expr"
-                },
-                "C": {
-                    "title": 3,
-                    "type": "Expr"
-                },
-                "D": {
-                    "title": 4,
-                    "type": "Expr"
-                },
-                "E": {
-                    "title": 5,
-                    "type": "Expr"
-                },
-                "Prev": {
-                    "title": "Other",
+                "C1": "Exprs",
+                "C2": "Exprs",
+                "C3": "Exprs"
+            },
+            "out": {
+                "O": {
                     "type": "Exprs"
                 }
+            }
+        },
+        "Gather5Columns": {
+            "group": "core",
+            "title": "Gather 5 columns",
+            "color": "0-#32a-#0a5:40-#03a",
+            "in": {
+                "C1": "Exprs",
+                "C2": "Exprs",
+                "C3": "Exprs",
+                "C4": "Exprs",
+                "C5": "Exprs"
+            },
+            "out": {
+                "O": {
+                    "type": "Exprs"
+                }
+            }
+        },
+        "Gather10Columns": {
+            "group": "core",
+            "title": "Gather 10 columns",
+            "color": "0-#32a-#0a5:40-#03a",
+            "in": {
+                "C1": "Exprs",
+                "C2": "Exprs",
+                "C3": "Exprs",
+                "C4": "Exprs",
+                "C5": "Exprs",
+                "C6": "Exprs",
+                "C7": "Exprs",
+                "C8": "Exprs",
+                "C9": "Exprs",
+                "C10": "Exprs"
             },
             "out": {
                 "O": {
@@ -544,6 +592,7 @@ var vaxSchema = {
             }
         },
         "Plus": {
+            "group": "expr",
             "title": "+",
             "typeParams": [
                 "T"
@@ -557,6 +606,7 @@ var vaxSchema = {
             }
         },
         "Minus": {
+            "group": "expr",
             "title": "-",
             "typeParams": [
                 "T"
@@ -587,6 +637,56 @@ var vaxSchema = {
                     "title": "O",
                     "type": "BooleanExpr"
                 }
+            }
+        },
+        "NotEq": {
+            "group": "cmp",
+            "title": "!=",
+            "in": {
+                "A": {
+                    "title": "A",
+                    "type": "Expr"
+                },
+                "B": {
+                    "title": "B",
+                    "type": "Expr"
+                }
+            },
+            "out": {
+                "O": {
+                    "title": "O",
+                    "type": "BooleanExpr"
+                }
+            }
+        },
+        "In": {
+            "group": "cmp",
+            "title": "IN",
+            "in": {
+                "E": "Expr",
+                "I1": "Expr",
+                "I2": "Expr",
+                "I3": "Expr",
+                "I4": "Expr",
+                "I5": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "NotIn": {
+            "group": "cmp",
+            "title": "NOT IN",
+            "in": {
+                "E": "Expr",
+                "I1": "Expr",
+                "I2": "Expr",
+                "I3": "Expr",
+                "I4": "Expr",
+                "I5": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
             }
         },
         "Lt": {
@@ -628,6 +728,18 @@ var vaxSchema = {
             "in": {
                 "A": "Expr",
                 "B": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "Between": {
+            "group": "cmp",
+            "title": "BETWEEN",
+            "in": {
+                "E": "Expr",
+                "L": "Expr",
+                "R": "Expr"
             },
             "out": {
                 "O": "BooleanExpr"
@@ -693,6 +805,16 @@ var vaxSchema = {
         "Interval_NDays": {
             "group": "datetime",
             "title": "Interval N Days",
+            "attrs": {
+                "N": "Int"
+            },
+            "out": {
+                "O": "IntervalExpr"
+            }
+        },
+        "Interval_NMonths": {
+            "group": "datetime",
+            "title": "Interval N Months",
             "attrs": {
                 "N": "Int"
             },
@@ -800,9 +922,25 @@ var vaxSchema = {
                 "O": "TextColumn"
             }
         },
+        "Col_Order_DeliveryServiceExternalOrderId": {
+            "group": "TblOrder",
+            "title": "Заказ.ID заказа в СД",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "ds_id"
+                }
+            },
+            "out": {
+                "O": "TextColumn"
+            }
+        },
         "Col_Order_Cost": {
             "group": "TblOrder",
-            "title": "Заказ.Стоимость",
+            "title": "Заказ.ЗаявленнаяСтоимость",
             "in": {
                 "T": "Tbl_Order"
             },
@@ -814,6 +952,38 @@ var vaxSchema = {
             },
             "out": {
                 "O": "NumericColumn"
+            }
+        },
+        "Col_Order_PaymentSum": {
+            "group": "TblOrder",
+            "title": "Заказ.Сумма приходов",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "payment_sum"
+                }
+            },
+            "out": {
+                "O": "NumericColumn"
+            }
+        },
+        "Col_Order_FirstPaymentDate": {
+            "group": "TblOrder",
+            "title": "Заказ.Дата первого прихода денег",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "first_oper_date"
+                }
+            },
+            "out": {
+                "O": "DateColumn"
             }
         },
         "Col_Order_SendDate": {
@@ -920,6 +1090,154 @@ var vaxSchema = {
             },
             "out": {
                 "O": "TextExpr"
+            }
+        },
+        "Tbl_OrderTrackInformation": {
+            "group": "tables",
+            "title": "Тбл.ТрекингЗаказа",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "oti"
+                }
+            },
+            "out": {
+                "O": "Tbl_OrderTrackInformation"
+            }
+        },
+        "Col_OrderTrackInformation_Barcode": {
+            "group": "TblOrderTrackInformation",
+            "title": "ШПИ по трекингу",
+            "in": {
+                "T": "Tbl_OrderTrackInformation"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "barcode"
+                }
+            },
+            "out": {
+                "O": "TextColumn"
+            }
+        },
+        "Col_OrderTrackInformation_FirstOperDate": {
+            "group": "TblOrderTrackInformation",
+            "title": "Дата отправки по трекингу",
+            "in": {
+                "T": "Tbl_OrderTrackInformation"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "first_oper_date"
+                }
+            },
+            "out": {
+                "O": "DateColumn"
+            }
+        },
+        "Tbl_ClaimOrder": {
+            "group": "tables",
+            "title": "Тбл.ЗаказВПретензии",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "co"
+                }
+            },
+            "out": {
+                "O": "Tbl_ClaimOrder"
+            }
+        },
+        "Col_Claim_ID": {
+            "group": "TblClaim",
+            "title": "ID претензии",
+            "in": {
+                "T": "Tbl_Claim"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "claim_id"
+                }
+            },
+            "out": {
+                "O": "IdColumn"
+            }
+        },
+        "Col_Claim_Status": {
+            "group": "TblClaim",
+            "title": "Статус претензии",
+            "in": {
+                "T": "Tbl_Claim"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "claim_status"
+                }
+            },
+            "out": {
+                "O": "TextColumn"
+            }
+        },
+        "Col_Claim_Workflow": {
+            "group": "TblClaim",
+            "title": "Workflow претензии",
+            "in": {
+                "T": "Tbl_Claim"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "claim_workflow"
+                }
+            },
+            "out": {
+                "O": "TextColumn"
+            }
+        },
+        "Col_Claim_SendDate": {
+            "group": "TblClaim",
+            "title": "Дата подачи претензии",
+            "in": {
+                "T": "Tbl_Claim"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "claim_send_date"
+                }
+            },
+            "out": {
+                "O": "DateColumn"
+            }
+        },
+        "Tbl_Claim": {
+            "group": "tables",
+            "title": "Тбл.Претензия",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "claim"
+                }
+            },
+            "out": {
+                "O": "Tbl_Claim"
+            }
+        },
+        "Tbl_ClaimTicketReply": {
+            "group": "tables",
+            "title": "Тбл.ПретензионныйОтветПоЗаказу",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "reply"
+                }
+            },
+            "out": {
+                "O": "Tbl_ClaimTicketReply"
             }
         }
     }
