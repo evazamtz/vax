@@ -5,6 +5,7 @@
     <script src="vendor/underscore.js" type="text/javascript"></script>
     <script src="vendor/jquery.js" type="text/javascript"></script>
     <script src="vendor/raphael.js" type="text/javascript"></script>
+    <script src="vendor/raphael-paragraph.js" type="text/javascript"></script>
     <script src="vendor/chosen/chosen.jquery.js" type="text/javascript"></script>
     <script src="vax.js" type="text/javascript"></script>
     <script src="schema.js" type="text/javascript"></script>
@@ -23,6 +24,18 @@
         right: 10px;
         z-index: 1000;
     }
+    #save {
+        position: absolute;
+        top: 40px;
+        right: 10px;
+        z-index: 1000;
+    }
+    #load {
+        position: absolute;
+        top: 70px;
+        right: 10px;
+        z-index: 1000;
+    }
 </style>
 <div id="vax-test" style="width: 1800px; height: 950px;"></div>
 
@@ -36,6 +49,8 @@
 -->
 
 <button id="eval" type="button">Eval!</button>
+<button id="save" type="button">Save!</button>
+<button id="load" type="button">Load!</button>
 
 
 <script type="text/javascript">
@@ -44,17 +59,27 @@
         window.myVAX = new VAX('vax-test', {schema: vaxSchema});
 
 
-        // window.uf = {"version":"0.1","nodes":[{"id":2,"c":"UF_Input","x":517,"y":154,"t":{"T":"BooleanExpr"},"a":{"Name":"1","Title":"Title"}},{"id":6,"c":"UF_Input","x":516,"y":323,"t":{"T":"BooleanExpr"},"a":{"Name":"2","Title":"Title"}},{"id":10,"c":"UF_Input","x":517,"y":505,"t":{"T":"BooleanExpr"},"a":{"Name":"3","Title":"Title"}},{"id":14,"c":"UF_Function","x":1201,"y":518,"a":{"Name":"AND 3","Description":"AND 3"}},{"id":19,"c":"UF_Output","x":1046,"y":416,"t":{"T":"BooleanExpr"},"a":{"Name":"O","Title":"Title"}},{"id":24,"c":"And","x":706,"y":292},{"id":28,"c":"And","x":888,"y":387}],"wires":[[2,"O",24,"A"],[6,"O",24,"B"],[10,"O",28,"B"],[24,"O",28,"A"],[28,"O",19,"I"],[19,"O",14,"Outputs"]]};
+
+        var bp = JSON.parse(window.localStorage.getItem('sessionGraph'));
+        // myVAX.loadGraph(bp);
 
 
-        /*var funcId = myVAX.userFunctionStorage.generateNewId();
-        var tabId = myVAX.tabs.createNewFunctionTab(funcId, 'TestF', 1);
-        myVAX.tabs.switchToTab(tabId);
-        myVAX.loadGraph(uf);*/
+        /*var txt = "Very long text wtf is this shit I gotta work now \n Holy moy schlo asf f asf ";
+        var p = myVAX.raphael.paragraph({x: 100, y: 100, maxWidth: 100, lineHeight: 20, maxHeight: 50, text: txt});
+        p.attr({title: txt});
 
+        window.console.debug(p);*/
 
-        var bp = {"version":"0.1","nodes":[{"id":61,"c":"vax_uf_1482676855372_372_10","x":695,"y":304},{"id":64,"c":"GatherColumns","x":945,"y":350},{"id":72,"c":"Tbl_Order","x":470,"y":242,"a":{"Alias":"o"}}],"wires":[[61,"O",64,"A"],[72,"O",61,"I"]]};4
-        myVAX.loadGraph(bp);
+        $('#save').click(function()
+        {
+            window.localStorage.setItem('sessionGraph', myVAX.serializeGraph());
+        });
+
+        $('#load').click(function()
+        {
+            var graph = window.localStorage.getItem('sessionGraph');
+            myVAX.loadGraph(JSON.parse(graph));
+        });
 
         // eval
         $('#eval').click(function()

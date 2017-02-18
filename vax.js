@@ -1478,6 +1478,18 @@
                 return this;
             };
 
+            this.addSet = function(set)
+            {
+                this.children.push({
+                    type: 'set',
+                    shape: set,
+                    dx: 0,
+                    dy: 0
+                });
+
+                return this;
+            };
+
             this.addText = function(text)
             {
                 this.children.push({
@@ -1551,19 +1563,24 @@
 
                 _.each(this.children, function(child)
                 {
-                    if (child.type == 'circle')
+                    switch (child.type)
                     {
-                        child.shape.attr({
-                            cx: rx - child.dx,
-                            cy: ry - child.dy
-                        });
-                    }
-                    else
-                    {
-                        child.shape.attr({
-                            x: rx - child.dx,
-                            y: ry - child.dy
-                        });
+                        case 'circle':
+                            child.shape.attr({
+                                cx: rx - child.dx,
+                                cy: ry - child.dy
+                            });
+                            break;
+
+                        case 'set':
+                            child.shape.translate(dx, dy);
+                            break;
+
+                        default:
+                            child.shape.attr({
+                                x: rx - child.dx,
+                                y: ry - child.dy
+                            });
                     }
                 });
 
@@ -2566,6 +2583,8 @@
             });
             this.value = this.config.default;
 
+            this.nodeMaxWidth = null;
+
             this.valuePicker = self.vaxRoot.valuePickers[self.config.valuePicker.type]; // TODO: more error checks
 
             this.createCaption = function()
@@ -2604,16 +2623,25 @@
 
                 var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
-                self.valueHolder = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35, self.getValueTitle(self.value));
-                self.valueHolder.attr('text-anchor', 'start');
-
-                self.valueHolder.attr({
-                    "fill": "orange",
-                    "font-family": "Tahoma",
-                    "font-size": "12pt",
-                    "font-weight": "bold",
-                    "text-anchor": "start",
+                var valueTitle = self.getValueTitle(self.value);
+                self.valueHolderSet = raphael.paragraph({
+                    x: nodeX + 20,
+                    y: nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35,
+                    text: valueTitle,
+                    maxWidth: 100,
+                    maxHeight: 20,
+                    textStyle: {
+                        "text-anchor": 'start',
+                        "fill": "orange",
+                        "font-family": "Tahoma",
+                        "font-size": "12pt",
+                        "font-weight": "bold",
+                        "text-anchor": "start",
+                        "title": valueTitle + "\nClick to change value",
+                    }
                 });
+
+                self.valueHolder = self.valueHolderSet[0];
 
                 this.node.getDraggingGroup().addText(self.valueHolder);
             };
@@ -2626,7 +2654,7 @@
 
             this.getBoundingBoxWidth = function()
             {
-                return Math.max(this.valueHolder.getBBox().width, this.caption.getBBox().width + 20);
+                return this.caption.getBBox().width + 20;
             };
 
             this.invokeValuePicker = function()
@@ -3388,7 +3416,7 @@
 
             this.getValueTitle = function(value, options)
             {
-                return this.getDictionary(options).values[value];
+                return this.getDictionary(options).values[value] || '';
             };
 
             this.invoke = function(value, callback, options)

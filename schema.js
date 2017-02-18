@@ -6,16 +6,24 @@ var vaxSchema = {
         "boolean": "#ff0"
     },
     "types": {
-        "String": {},
+        "Int": null,
+        "String": null,
         "Relation": {
+            "color": "@relation"
+        },
+        "WindowClause": {
             "color": "@relation"
         },
         "Exprs": {
             "color": "@exprs"
         },
+        "NullExpr": {
+            "color": "@expr"
+        },
         "Expr": {
             "color": "@expr",
             "extends": [
+                "NullExpr",
                 "Exprs"
             ]
         },
@@ -37,7 +45,19 @@ var vaxSchema = {
         },
         "TimestampExpr": {
             "color": "@expr",
-            "extends": "Expr"
+            "extends": [
+                "Expr"
+            ]
+        },
+        "DateExpr": {
+            "color": "@expr",
+            "extends": "TimestampExpr"
+        },
+        "IntervalExpr": {
+            "color": "@expr",
+            "extends": [
+                "Expr"
+            ]
         },
         "Table": {
             "color": "@relation",
@@ -65,6 +85,13 @@ var vaxSchema = {
             ],
             "color": "@expr"
         },
+        "BooleanColumnRef": {
+            "extends": [
+                "ColumnRef",
+                "BooleanExpr"
+            ],
+            "color": "@expr"
+        },
         "IdColumnRef": {
             "extends": [
                 "NumericColumnRef",
@@ -72,9 +99,15 @@ var vaxSchema = {
             ],
             "color": "@expr"
         },
-        "TimestampColumnRef": {
+        "DateColumnRef": {
             "extends": [
                 "ColumnRef",
+                "DateExpr"
+            ]
+        },
+        "TimestampColumnRef": {
+            "extends": [
+                "DateColumnRef",
                 "TimestampExpr"
             ],
             "color": "@expr"
@@ -104,10 +137,49 @@ var vaxSchema = {
             ],
             "color": "@expr"
         },
+        "DateColumn": {
+            "extends": [
+                "Column",
+                "DateColumnRef"
+            ],
+            "color": "@expr"
+        },
         "TimestampColumn": {
             "extends": [
                 "Column",
                 "TimestampColumnRef"
+            ],
+            "color": "@expr"
+        },
+        "Subquery": {
+            "extends": "Expr",
+            "color": "@expr"
+        },
+        "NumericSubquery": {
+            "extends": [
+                "Subquery",
+                "NumericColumnRef"
+            ],
+            "color": "@expr"
+        },
+        "BooleanSubquery": {
+            "extends": [
+                "Subquery",
+                "BooleanColumnRef"
+            ],
+            "color": "@expr"
+        },
+        "TextSubquery": {
+            "extends": [
+                "Subquery",
+                "TextColumnRef"
+            ],
+            "color": "@expr"
+        },
+        "DateSubquery": {
+            "extends": [
+                "Subquery",
+                "DateColumnRef"
             ],
             "color": "@expr"
         },
@@ -117,23 +189,18 @@ var vaxSchema = {
                 "Exprs"
             ]
         },
+        "OrderByColumns": {
+            "color": "@exprs",
+            "extends": [
+                "Columns"
+            ]
+        },
         "Select": {
             "extends": "Relation",
             "color": "@relation"
         },
-        "CTE": {
-            "extends": "Select",
-            "color": "@relation"
-        },
         "Identifier": {
             "color": "#0ff"
-        },
-        "OrderColumns": {
-            "color": "@exprs"
-        },
-        "OrderColumn": {
-            "extends": "OrderColumns",
-            "color": "@expr"
         },
         "Tbl_Order": {
             "extends": "Table",
@@ -149,102 +216,25 @@ var vaxSchema = {
         }
     },
     "dictionaries": {
-        "JoinType": {
-            "title": "Виды JOINов",
+        "AggregateTypes": {
+            "title": "Типы аггрегатных функций",
             "values": {
-                "left": "LEFT",
-                "right": "RIGHT"
+                "MAX": "MAX",
+                "MIN": "MIN",
+                "AVG": "AVG",
+                "COUNT": "COUNT",
+                "SUM": "SUM"
             }
         },
-        "OperTypes": {
-            "title": "Типа операций",
+        "OrderDeliveryStatuses": {
+            "title": "Статусы доставки заказ",
             "values": {
-                "1": "Вручение адресату",
-                "2": "Возврат",
-                "3": "В пути"
+                "delivered": "Доставлен",
+                "intransit": "В пути"
             }
         }
     },
     "components": {
-        "Tbl_Dict": {
-            "title": "Выбор из словаря",
-            "attrs": {
-                "OperType": {
-                    "type": "String",
-                    "default": 1,
-                    "valuePicker": {
-                        "type": "dictionary",
-                        "dictionary": "OperTypes"
-                    }
-                }
-            }
-        },
-        "Tbl_Order": {
-            "title": "Тбл.Заказ",
-            "attrs": {
-                "Alias": {
-                    "type": "Identifier",
-                    "default": "o"
-                }
-            },
-            "out": {
-                "O": "Tbl_Order"
-            }
-        },
-        "Col_Order_DeliveryStatus": {
-            "title": "Заказ.СтатусДоставки",
-            "in": {
-                "T": "Tbl_Order"
-            },
-            "attrs": {
-                "Alias": {
-                    "type": "Identifier",
-                    "default": "delivery_status"
-                }
-            },
-            "out": {
-                "O": "TextColumn"
-            }
-        },
-        "Tbl_Customer": {
-            "title": "Тбл.Клиент",
-            "attrs": {
-                "Alias": {
-                    "type": "Identifier",
-                    "default": "ct"
-                }
-            },
-            "out": {
-                "O": "Tbl_Customer"
-            }
-        },
-        "Tbl_LegalEntity": {
-            "title": "Тбл.ЮрЛицо",
-            "attrs": {
-                "Alias": {
-                    "type": "Identifier",
-                    "default": "le"
-                }
-            },
-            "out": {
-                "O": "Tbl_LegalEntity"
-            }
-        },
-        "LegalEntity_FullName": {
-            "title": "Полное имя клиента",
-            "in": {
-                "T": "Tbl_LegalEntity"
-            },
-            "attrs": {
-                "Alias": {
-                    "type": "Identifier",
-                    "default": "le_fullname"
-                }
-            },
-            "out": {
-                "O": "TextExpr"
-            }
-        },
         "Select": {
             "title": "SELECT",
             "color": "0-#495-#075:20-#335",
@@ -252,27 +242,32 @@ var vaxSchema = {
                 "Cols": "Exprs",
                 "FROM": "Relation",
                 "WHERE": "BooleanExpr",
-                "ORDER": "OrderColumns",
+                "ORDER": "OrderByColumns",
                 "GROUP": "Exprs",
                 "HAVING": "BooleanExpr"
             },
             "attrs": {
-                "Alias": "Identifier"
+                "Alias": "Identifier",
+                "LIMIT": "Int",
+                "OFFSET": "Int"
             },
             "out": {
                 "O": "Select"
             }
         },
-        "CountAsteriks": {
-            "title": "COUNT(*)",
+        "Subquery": {
+            "title": "Subquery",
+            "typeParams": [
+                "T"
+            ],
+            "in": {
+                "S": "Select"
+            },
             "attrs": {
-                "Alias": {
-                    "type": "Identifier",
-                    "default": "cnt"
-                }
+                "Alias": "Identifier"
             },
             "out": {
-                "O": "NumericExpr"
+                "O": "@T"
             }
         },
         "SmartJoin": {
@@ -413,7 +408,7 @@ var vaxSchema = {
                 },
                 "Prev": {
                     "title": "Prev. order",
-                    "type": "OrderColumns"
+                    "type": "OrderByColumns"
                 }
             },
             "attrs": {
@@ -424,7 +419,7 @@ var vaxSchema = {
             },
             "out": {
                 "O": {
-                    "type": "OrderColumns"
+                    "type": "OrderByColumns"
                 }
             }
         },
@@ -432,19 +427,47 @@ var vaxSchema = {
             "title": "GROUP BY",
             "color": "0-#32d-#aa5:40-#03a",
             "in": {
-                "E": {
-                    "title": "Expr",
-                    "type": "Expr"
-                },
-                "Prev": {
-                    "title": "Prev. grouping",
-                    "type": "Exprs"
-                }
+                "A": "Expr",
+                "B": "Expr",
+                "C": "Expr",
+                "Prev": "Exprs"
             },
             "out": {
                 "O": {
                     "type": "Exprs"
                 }
+            }
+        },
+        "Aggregate": {
+            "title": "Aggregate",
+            "in": {
+                "Expr": "Expr",
+                "FILTER": "BooleanExpr",
+                "OVER": "WindowClause"
+            },
+            "attrs": {
+                "Type": {
+                    "valuePicker": {
+                        "type": "dictionary",
+                        "dictionary": "AggregateTypes"
+                    }
+                },
+                "Alias": "Identifier"
+            },
+            "out": {
+                "O": "Expr"
+            }
+        },
+        "CountAsteriks": {
+            "title": "COUNT(*)",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "cnt"
+                }
+            },
+            "out": {
+                "O": "NumericExpr"
             }
         },
         "And": {
@@ -485,6 +508,41 @@ var vaxSchema = {
                 }
             }
         },
+        "Not": {
+            "title": "NOT",
+            "in": {
+                "I": "BooleanExpr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "Plus": {
+            "title": "+",
+            "typeParams": [
+                "T"
+            ],
+            "in": {
+                "A": "@T",
+                "B": "@T"
+            },
+            "out": {
+                "O": "@T"
+            }
+        },
+        "Minus": {
+            "title": "-",
+            "typeParams": [
+                "T"
+            ],
+            "in": {
+                "A": "@T",
+                "B": "@T"
+            },
+            "out": {
+                "O": "@T"
+            }
+        },
         "Eq": {
             "title": "=",
             "in": {
@@ -502,6 +560,70 @@ var vaxSchema = {
                     "title": "O",
                     "type": "BooleanExpr"
                 }
+            }
+        },
+        "Lt": {
+            "title": "<",
+            "in": {
+                "A": "Expr",
+                "B": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "LtEq": {
+            "title": "<=",
+            "in": {
+                "A": "Expr",
+                "B": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "Gt": {
+            "title": "",
+            "in": {
+                "A": "Expr",
+                "B": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "GtEq": {
+            "title": ">=",
+            "in": {
+                "A": "Expr",
+                "B": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "IsNull": {
+            "title": "IS NULL",
+            "in": {
+                "I": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "IsNotNull": {
+            "title": "IS NOT NULL",
+            "in": {
+                "I": "Expr"
+            },
+            "out": {
+                "O": "BooleanExpr"
+            }
+        },
+        "null": {
+            "title": null,
+            "out": {
+                "O": "NullExpr"
             }
         },
         "TypedEq": {
@@ -524,6 +646,55 @@ var vaxSchema = {
                     "title": "O",
                     "type": "BooleanExpr"
                 }
+            }
+        },
+        "CurrentDate": {
+            "title": "CURRENT_DATE",
+            "out": {
+                "O": "DateExpr"
+            }
+        },
+        "Interval_NDays": {
+            "title": "Interval N Days",
+            "attrs": {
+                "N": "Int"
+            },
+            "out": {
+                "O": "IntervalExpr"
+            }
+        },
+        "GenerateSeries_StartStopInterval": {
+            "title": "generate_series(start,stop,interval)",
+            "in": {
+                "start": "TimestampExpr",
+                "stop": "TimestampExpr",
+                "interval": "IntervalExpr"
+            },
+            "attrs": {
+                "Alias": "Identifier"
+            },
+            "out": {
+                "O": "TimestampExpr"
+            }
+        },
+        "AppendDaysToDate": {
+            "title": "Date + N days",
+            "in": {
+                "A": "DateExpr",
+                "B": "NumericExpr"
+            },
+            "out": {
+                "O": "DateExpr"
+            }
+        },
+        "SubtractDaysFromDate": {
+            "title": "Date - N days",
+            "in": {
+                "A": "DateExpr",
+                "B": "NumericExpr"
+            },
+            "out": {
+                "O": "DateExpr"
             }
         },
         "CustomSql": {
@@ -570,6 +741,147 @@ var vaxSchema = {
             "color": "0-#495-#075:20-#335",
             "in": {
                 "S": "Select"
+            }
+        },
+        "Tbl_Order": {
+            "title": "Тбл.Заказ",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "o"
+                }
+            },
+            "out": {
+                "O": "Tbl_Order"
+            }
+        },
+        "Col_Order_DeliveryStatus": {
+            "title": "Заказ.СтатусДоставки",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "delivery_status"
+                }
+            },
+            "out": {
+                "O": "TextColumn"
+            }
+        },
+        "Col_Order_Cost": {
+            "title": "Заказ.Стоимость",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "total_cost_for_recipient"
+                }
+            },
+            "out": {
+                "O": "NumericColumn"
+            }
+        },
+        "Col_Order_SendDate": {
+            "title": "Заказ.ДатаОтправки",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "send_date"
+                }
+            },
+            "out": {
+                "O": "DateColumn"
+            }
+        },
+        "Col_Order_CustomerId": {
+            "title": "Заказ.IdКлиента",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "customer_id"
+                }
+            },
+            "out": {
+                "O": "IdColumn"
+            }
+        },
+        "Col_Order_Platform": {
+            "title": "Заказ.Площадка",
+            "in": {
+                "T": "Tbl_Order"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "origin_platform"
+                }
+            },
+            "out": {
+                "O": "TextColumn"
+            }
+        },
+        "Dict_Order_DeliveryStatus": {
+            "title": "Статус доставки заказа",
+            "attrs": {
+                "S": {
+                    "title": "Статус",
+                    "valuePicker": {
+                        "type": "dictionary",
+                        "dictionary": "OrderDeliveryStatuses"
+                    }
+                }
+            },
+            "out": {
+                "O": "TextExpr"
+            }
+        },
+        "Tbl_Customer": {
+            "title": "Тбл.Клиент",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "ct"
+                }
+            },
+            "out": {
+                "O": "Tbl_Customer"
+            }
+        },
+        "Tbl_LegalEntity": {
+            "title": "Тбл.ЮрЛицо",
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "le"
+                }
+            },
+            "out": {
+                "O": "Tbl_LegalEntity"
+            }
+        },
+        "LegalEntity_FullName": {
+            "title": "Полное имя клиента",
+            "in": {
+                "T": "Tbl_LegalEntity"
+            },
+            "attrs": {
+                "Alias": {
+                    "type": "Identifier",
+                    "default": "le_fullname"
+                }
+            },
+            "out": {
+                "O": "TextExpr"
             }
         }
     }
