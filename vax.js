@@ -2598,26 +2598,33 @@
                 self.rect.attr({
                     "fill": vaxRoot.getColorOfParsedType(self.config.type),
                     "stroke-width": 0,
+                    "title": "Click to change this value ...",
+                    "cursor": "pointer"
                 });
                 this.node.getDraggingGroup().addRect(self.rect);
 
-
                 self.caption = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35 - 15, self.config.title);
-                self.caption.attr('text-anchor', 'start');
-
                 self.caption.attr({
+                    'text-anchor': 'start',
                     "fill": "#fff",
                     "font-family": "Tahoma",
                     "font-size": "12pt",
                     "font-weight": "bold",
-                    "text-anchor": "start"
+                    "title": "Click to change this value ...",
+                    "cursor": "pointer"
                 });
 
                 this.node.getDraggingGroup().addText(self.caption);
             };
 
-            this.createValueHolder = function()
+            this.invalidateValueHolder = function()
             {
+                if (self.valueHolder)
+                {
+                    self.valueHolder.remove();
+                    self.valueHolder = null;
+                }
+
                 var nodeX = self.node.getX();
                 var nodeY = self.node.getY();
 
@@ -2628,20 +2635,27 @@
                     x: nodeX + 20,
                     y: nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35,
                     text: valueTitle,
-                    maxWidth: 100,
+                    maxWidth: 100, // TODO: change dynamically from node
                     maxHeight: 20,
                     textStyle: {
                         "text-anchor": 'start',
                         "fill": "orange",
                         "font-family": "Tahoma",
                         "font-size": "12pt",
-                        "font-weight": "bold",
-                        "text-anchor": "start",
-                        "title": valueTitle + "\nClick to change value",
+                        "font-weight": "bold"
                     }
                 });
 
                 self.valueHolder = self.valueHolderSet[0];
+                self.valueHolder.attr({
+                    "title": valueTitle + "\nClick to change this value ...",
+                    "cursor": "pointer"
+                });
+
+                self.valueHolder.click(function()
+                {
+                    self.invokeValuePicker();
+                });
 
                 this.node.getDraggingGroup().addText(self.valueHolder);
             };
@@ -2664,7 +2678,7 @@
                 var callback = function(value)
                 {
                     self.value = value;
-                    self.valueHolder.attr("text", self.getValueTitle(value));
+                    self.invalidateValueHolder();
                 };
 
                 self.valuePicker.invoke(self.value, callback, self.config.valuePicker);
@@ -2673,17 +2687,15 @@
             this.init = function () {
 
                 self.createCaption();
-                self.createValueHolder();
+                self.invalidateValueHolder();
 
                 // change handler
-                _.each([self.rect, self.caption, self.valueHolder], function(el)
+                _.each([self.rect, self.caption], function(el)
                 {
                     el.click(function()
                     {
                         self.invokeValuePicker();
                     });
-
-                    el.attr({'title': 'Click to change this value', 'cursor': 'pointer'});
                 });
 
             };
