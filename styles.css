@@ -260,6 +260,10 @@
 
             }
 
+            .vax-memo {
+                font-family: "Lucida Console", "Tahoma", sans-serif;
+            }
+
     /** ===TYPE PICKER */
     .vax-type-picker {
 

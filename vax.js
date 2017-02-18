@@ -303,6 +303,7 @@
         // create valuePickers
         this.valuePickers = {
             default:    new VaxDefaultValuePicker(this),
+            memo:       new VaxMemoValuePicker(this),
             dictionary: new VaxDictionaryValuePicker(this)
         };
 
@@ -770,6 +771,7 @@
         this.nodes = {};
         this.sockets = {};
         this.wires = {};
+        this.comments = {};
 
         this.getNodeById = function(id)
         {
@@ -847,6 +849,11 @@
                     if (evt.keyCode == 88 && !evt.ctrlKey) // X key
                     {
                         self.showComponentSelector();
+                    }
+
+                    if (evt.keyCode == 67 && !evt.ctrlKey) // C key
+                    {
+                        self.showCommentCreator();
                     }
 
                     if (evt.keyCode == 70) // F key
@@ -1182,6 +1189,7 @@
             this.refreshScrollSliders();
         };
 
+        // Показать диалог для выбора и создания нового компонента
         this.showComponentSelector = function()
         {
             var self = this;
@@ -1410,6 +1418,22 @@
             })
         };
 
+        // Show create comment dialog
+        this.showCommentCreator = function()
+        {
+            var self = this;
+
+            self.newCommentX = self.mouseX;
+            self.newCommentY = self.mouseY;
+
+            var memoValuePicker = vaxRoot.valuePickers.memo;
+
+            memoValuePicker.invoke('', function(commentText)
+            {
+                self.createComment({x: self.newCommentX, y: self.newCommentY, text: commentText});
+            });
+        };
+
         this.createNode = function(config)
         {
             var newId = "VaxNode-" + vax.genNextId();
@@ -1417,6 +1441,15 @@
             this.nodes[newId] = newNode;
 
             return newNode;
+        };
+
+        this.createComment = function(config)
+        {
+            var newId = 'VaxComment-' + vax.genNextId();
+            var newComment = new VaxComment(newId, config);
+            this.comments[newId] = newComment;
+
+            return newComment;
         };
 
         this.createDraggingGroup = function(rootRect)
@@ -1613,7 +1646,7 @@
                             break;
 
                         case 'set':
-                            child.shape.translate(dx, dy);
+                            child.shape.translate(-dx, -dy);
                             break;
 
                         default:
@@ -1652,9 +1685,9 @@
                 throw new Error("Instance of VAX was expected!");
             }
 
-            this.vaxRoot = vax;
-            this.nodesIds = [];
-            this.wiresIds = [];
+            this.vaxRoot     = vax;
+            this.nodesIds    = [];
+            this.wiresIds    = [];
 
             this.getNodesIds = function()
             {
@@ -1662,6 +1695,12 @@
             };
 
             this.clear = function()
+            {
+                this.clearNodes();
+                this.clearWires();
+            };
+
+            this.clearNodes = function()
             {
                 var self = this;
 
@@ -1673,8 +1712,6 @@
                     }
                 });
                 this.nodesIds = [];
-
-                this.clearWires();
             };
 
             this.clearWires = function()
@@ -1693,6 +1730,7 @@
 
             this.testByRect = function(rect)
             {
+                // test nodes
                 var nodesIds = _.map(
                     _.filter(
                         this.vaxRoot.nodes,
@@ -1701,8 +1739,8 @@
                     function(node) { return node.getId(); }
                 );
 
+                // test wires
                 var wiresIds = [];
-
                 if (_.size(nodesIds) == 0)
                 {
                     wiresIds = _.map(
@@ -1714,9 +1752,10 @@
                     );
                 }
 
+                // collect results
                 return {
-                    nodesIds: nodesIds,
-                    wiresIds: wiresIds
+                    nodesIds:    nodesIds,
+                    wiresIds:    wiresIds
                 };
             };
 
@@ -3423,12 +3462,176 @@
             this.init();
         };
 
+        function VaxComment(id, config)
+        {
+            var self = this;
+
+            this.id = id;
+            this.draggingGroup = null;
+
+            this.config = _.defaults(config, {
+                x: 0,
+                y: 0,
+                text: ''
+            });
+            this.text = this.config.text;
+
+            this.getVAX = function()
+            {
+                return vaxRoot;
+            };
+
+            // initialize functions
+            this.init = function()
+            {
+                this.invalidate(self.config.x, self.config.y);
+            };
+
+            this.invalidate = function(x, y)
+            {
+                if (self.comment)
+                {
+                    self.comment.remove();
+                }
+
+                if (self.bgRect)
+                {
+                    self.bgRect.remove();
+                }
+
+                if (self.moveContainer)
+                {
+                    self.moveContainer.remove();
+                }
+
+                var padding = 15;
+
+                var textStyle = {
+                    "text-anchor": "start",
+                    "fill": "#ddd",
+                    "font-family": "Tahoma",
+                    "font-size": "14pt"
+                };
+
+                // bounding box text
+                var bbText = self.comment = raphael.text(x + padding, y, $.trim(self.text));
+                bbText.attr(textStyle);
+
+                var width  = bbText.getBBox().width + padding * 2;
+                var height = bbText.getBBox().height + padding * 2;
+
+                bbText.attr({y: y + height / 3.5}); // sp weird shit is happening, text starts to float upwards if multiline (probably fix it later with paragraph set)
+
+                // create background
+                self.bgRect = raphael.rect(x, y, width, height - padding, 5);
+                self.bgRect.attr({fill: "0-#222-#111", opacity: ".8", "stroke": "#bbb", "stroke-width": "1px"});
+                self.bgRect.toBack();
+
+                // create delete button
+                self.deleteCircle = raphael.circle(x + width, y, 10);
+                self.deleteCircle.attr({'fill': '#bbb', 'stroke-width': 0, 'cursor': 'pointer'});
+                self.deleteText = raphael.text(x + width, y, 'x');
+                self.deleteText.attr({'font-size': '12pt', 'font-weight': 'bold', 'cursor': 'pointer'});
+
+                // delete btn handlers
+                _.each([self.deleteText, self.deleteCircle], function(el)
+                {
+                    el.hover(
+                        function() {self.deleteCircle.attr({fill: '#cb0'});},
+                        function() {self.deleteCircle.attr({fill: '#bbb'});}
+                    );
+
+                    el.click(function()
+                        {
+                            if (confirm('Вы уверены что хотите удалить этот комментарий?')) {
+                                self.remove();
+                            }
+                        }
+                    );
+                });
+
+                // create move container
+                self.moveContainer = raphael.rect(x, y, width, height, 5);
+                self.moveContainer.attr({fill: "#000", opacity: "0", "cursor": "move", "title": "Double click to change the comment text ..."});
+
+                // group shit for dragging
+                self.draggingGroup = new VaxDraggingGroup(self.getVAX(), self.moveContainer);
+                self.draggingGroup.addRect(self.bgRect);
+                self.draggingGroup.addText(self.comment);
+                self.draggingGroup.addCircle(self.deleteCircle);
+                self.draggingGroup.addText(self.deleteText);
+
+                // 2x click for comment edditing
+                self.moveContainer.dblclick(function()
+                {
+                    var memoPicker = self.getVAX().valuePickers.memo;
+                    memoPicker.invoke(self.text, function(newComment)
+                    {
+                        self.text = newComment;
+                        self.invalidate(self.moveContainer.attr('x'), self.moveContainer.attr('y'));
+                    });
+                });
+            };
+
+            this.getId = function()
+            {
+                return this.id;
+            };
+
+            this.getBoundingBox = function()
+            {
+                var x = this.moveContainer.attr('x');
+                var y = this.moveContainer.attr('y');
+                var w = this.moveContainer.attr('width');
+                var h = this.moveContainer.attr('height');
+
+                return {
+                    left: x,
+                    top: y,
+                    right: x + w,
+                    bottom: y + h
+                };
+            };
+
+            this.getDraggingGroup = function()
+            {
+                return this.draggingGroup;
+            };
+
+            this.getText = function()
+            {
+                return this.text;
+            };
+
+            this.move = function(nx, ny)
+            {
+                var self = this;
+
+                self.bgRect.attr({x: nx, y: ny});
+                self.paragraph.attr({x: nx + 10, y: ny + 10});
+            };
+
+            this.remove = function()
+            {
+                this.draggingGroup.remove();
+                delete this.getVAX().comments[this.id];
+            };
+
+            // init me!
+            this.init();
+        };
+
         // value pickers classes
         function VaxDefaultValuePicker(vaxRoot)
         {
             this.getValueTitle = function(value, options)
             {
                 return value;
+            };
+
+            this._$createInput = function()
+            {
+                return $('<input type="text"/>');
             };
 
             this.invoke = function(value, callback, options)
@@ -3440,12 +3643,12 @@
                     return;
                 }
 
-                var $body = $('<input type="text"/>').val(value);
+                var $body = self._$createInput().val(value);
 
                 self.pickerDlg = vaxRoot.ui.createDialog({header: 'Enter value', body: $body, buttons: {'ok': 'OK', 'cancel': 'Cancel'}});
                 self.pickerDlg.show();
 
-                $('input,select', self.pickerDlg.$dlg).focus();
+                $('input,select,textarea', self.pickerDlg.$dlg).focus();
 
                 self.pickerDlg.on('ok', function()
                 {
@@ -3463,6 +3666,18 @@
                     delete self.pickerDlg;
                 });
             };
+        };
+
+        function VaxMemoValuePicker(vaxRoot)
+        {
+            var defaultPicker = new VaxDefaultValuePicker(vaxRoot);
+
+            defaultPicker._$createInput = function()
+            {
+                return $('<textarea rows="4" cols="20" class="vax-memo"/>');
+            };
+
+            return defaultPicker;
         };
 
         function VaxDictionaryValuePicker(vaxRoot)
@@ -3813,11 +4028,21 @@
 
                 return [output.getNode().getCompactId(), output.config.name, input.getNode().getCompactId(), input.config.name];
             });
+            
+            // --- comments
+            var commentsToPickle = filterNodesIds ? {} : self.comments; // if there's a filter on nodes -> we don't save comments at all
+
+            var commentsPickles = _.map(commentsToPickle, function(comment)
+            {
+                var commentBb = comment.getBoundingBox();
+                return {x: commentBb.left, y: commentBb.top, t: comment.getText()};
+            });
 
             // gather everything in a blueprint
             return {
-                nodes: nodesPickles,
-                wires: wiresPickles
+                nodes:    nodesPickles,
+                wires:    wiresPickles,
+                comments: commentsPickles
             };
         };
 
@@ -3975,6 +4200,15 @@
                     {
                         // report error
                     }
+                });
+            }
+
+            // create comments
+            if (graph.comments)
+            {
+                _.each(graph.comments, function(commentPickle)
+                {
+                    self.createComment({x: commentPickle.x, y: commentPickle.y, text: commentPickle.t});
                 });
             }
 
