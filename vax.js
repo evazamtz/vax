@@ -98,6 +98,7 @@
         {
            return {
                "UF_Input": {
+                   "group": "_ufElements",
                    "title": "Input",
                    "typeParams": [
                        "T"
@@ -117,6 +118,7 @@
                    }
                },
                "UF_Output": {
+                   "group": "_ufElements",
                    "title": "Output",
                    "typeParams": [
                        "T"
@@ -139,6 +141,7 @@
                    }
                },
                "UF_Function": {
+                   "group": "_ufElements",
                    "title": "Function",
                    "attrs": {
                        "Title": {
@@ -197,6 +200,7 @@
                 },
                */
                "UF_Outputs": {
+                   "group": "_ufElements",
                    "title": "Collect outputs",
                    "in": {
                        "O1": "UF_Outputs",
@@ -334,8 +338,11 @@
         // default config
         this.config = _.defaults(config, {
             schema: {
+                colors: {},
                 types: {},
-                components: {} // elements,nodes?
+                groups: {},
+                dictionaries: {},
+                components: {}
             }
         });
 
@@ -497,6 +504,16 @@
             return types;
         };
 
+        this.buildSchemaGroups = function(schema)
+        {
+            return _.defaults(schema.groups, {
+              '_default':       'Uncategorized',
+              '_userFunctions': 'User functions',
+              '_ufElements':    'User functions elements'
+            });
+        };
+
+
         this.buildSchemaComponents = function(schema)
         {
             var self = this;
@@ -522,6 +539,7 @@
             var isUserFunction = !!userFunctionData;
 
             var component = _.defaults(componentConfig, {
+                group: '_default',
                 component: name,
                 isUserFunction: isUserFunction,
                 title: name,
@@ -668,7 +686,7 @@
             var graph      = config.graph || {};
             var typeParams = config.typeParams || {};
 
-            var component = {};
+            var component = {group: "_userFunctions"};
 
             if (typeParams)
             {
@@ -745,7 +763,8 @@
 
         this.schema.colors       = this.buildSchemaColors(this.config.schema);
         this.schema.types        = this.buildSchemaTypes(this.config.schema);
-        this.schema.dictionaries = this.config.schema.dictionaries || {};
+        this.schema.groups       = this.buildSchemaGroups(this.config.schema);
+        this.schema.dictionaries = this.config.schema.dictionaries;
         this.schema.components   = this.buildSchemaComponents(this.config.schema, this.schema.types);
 
         this.nodes = {};
@@ -863,6 +882,11 @@
                     if (evt.keyCode == 69) // Ctrl + E
                     {
                         self.tabs.compileUserFunction();
+                    }
+
+                    if (evt.keyCode == 65) // Ctrl + A
+                    {
+                        self.selection.selectAllNodes();
                     }
                 }
             });
@@ -1172,28 +1196,44 @@
 
             var $selectorBody = $('<div class="vax-component-selector"><select data-role="component" class="vax-chosen"/></div>');
 
+            // create select
             var $select = $('[data-role="component"]', $selectorBody).css({'width': '100%'});
-            _.each(self.schema.components, function(component, name)
+
+            // fill it by groups
+            var grouped = _.groupBy(self.schema.components, function(component) { return component.group; });
+
+            _.each(grouped, function(components, group)
             {
-                if (!self.isComponentAppropriate(name))
+                var $optgroup = $("<optgroup>").attr('label', self.schema.groups[group]);
+
+                // fill <optgroup> with <option>s
+                _.each(components, function(component)
                 {
-                    return;
-                }
+                    var name = component.component;
 
-                var title = component.title;
-                if (component.typeParams && component.typeParams.length > 0)
-                {
-                    title = title + ' [' + component.typeParams.join(', ') + ']';
-                }
+                    if (!self.isComponentAppropriate(name))
+                    {
+                        return;
+                    }
 
-                var $option = $('<option/>').attr('value', name).text(title);
+                    var title = component.title;
+                    if (component.typeParams && component.typeParams.length > 0)
+                    {
+                        title = title + ' [' + component.typeParams.join(', ') + ']';
+                    }
 
-                if (self.lastSelectedComponent && self.lastSelectedComponent == name)
-                {
-                    $option.attr('selected', 'selected');
-                }
+                    var $option = $('<option/>').attr('value', name).text(title);
 
-                $select.append($option);
+                    if (self.lastSelectedComponent && self.lastSelectedComponent == name)
+                    {
+                        $option.attr('selected', 'selected');
+                    }
+
+                    $optgroup.append($option);
+                });
+
+                // append <optgroup> to main select
+                $select.append($optgroup);
             });
 
             // on component change
@@ -1735,6 +1775,16 @@
                         self.vaxRoot.nodes[nodeId].highlightSelection();
                     }
                 });
+            };
+
+            this.selectAllNodes = function()
+            {
+                var self = this;
+
+                self.clear();
+                self.nodesIds = [];
+
+                _.each(self.vaxRoot.nodes, function(node) {node.highlightSelection(); self.nodesIds.push(node.getId()); });
             };
 
             this.hasNodeId = function(nodeId)
@@ -2524,6 +2574,9 @@
                                 uf.name = uf.name || ufId;
 
                                 this.functions[ufId] = uf;
+
+                                // force component group
+                                uf.component.group = "_userFunctions";
 
                                 this.vaxRoot.schema.components[ufId] = this.vaxRoot.buildComponentConfig(uf.component, uf.component.name, {id: ufId, name: uf.name});
                             }

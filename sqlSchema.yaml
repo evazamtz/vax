@@ -137,8 +137,21 @@ dictionaries:
       delivered: Доставлен
       intransit: В пути
 
+groups:
+  core: Основные элементы
+  agg: Аггрегаты
+  bool: Логические элементы
+  datetime: Работа с датой
+  expr: Выражения
+  literal: Литералы
+  tables: Таблицы
+  TblOrder: Заказ
+  TblLegalEntity: ЮрЛицо
+
+
 components:
   Select:
+    group: core
     title: SELECT
     color: "0-#495-#075:20-#335"
     in:
@@ -156,6 +169,7 @@ components:
       O: Select
 
   Subquery:
+    group: core
     title: Subquery
     typeParams: [T]
     in:
@@ -166,6 +180,7 @@ components:
       O: @T
 
   SmartJoin:
+    group: core
     title: Smart JOIN
     color: "0-#495-#075:20-#335"
     in:
@@ -180,6 +195,7 @@ components:
       O: Relation
 
   PlainJoin:
+    group: core
     title: JOIN
     color: "0-#495-#075:20-#335"
     in:
@@ -193,6 +209,7 @@ components:
       O: Relation
 
   Table:
+    group: core
     title: Table
     color: "0-#195-#0a5:30-#635"
     width: 150
@@ -206,6 +223,7 @@ components:
         type: Table
 
   Column:
+    group: core
     title: Pick column
     color: "0-#32a-#0a5:40-#03a"
     in:
@@ -225,6 +243,7 @@ components:
         type: Column
 
   AllColumns:
+    group: core
     title: "*"
     color: "0-#32a-#0a5:40-#03a"
     in:
@@ -236,6 +255,7 @@ components:
         type: Columns
 
   GatherColumns:
+    group: core
     title: Gather columns
     color: "0-#32a-#0a5:40-#03a"
     in:
@@ -262,6 +282,7 @@ components:
         type: Exprs
 
   OrderBy:
+    group: core
     title: ORDER BY
     color: "0-#32a-#0a5:40-#03a"
     in:
@@ -280,18 +301,20 @@ components:
         type: OrderByColumns
 
   GroupBy:
-      title: GROUP BY
-      color: "0-#32d-#aa5:40-#03a"
-      in:
-        A: Expr
-        B: Expr
-        C: Expr
-        Prev: Exprs
-      out:
-        O:
-          type: Exprs
+    group: core
+    title: GROUP BY
+    color: "0-#32d-#aa5:40-#03a"
+    in:
+      A: Expr
+      B: Expr
+      C: Expr
+      Prev: Exprs
+    out:
+      O:
+        type: Exprs
 
   Aggregate:
+    group: agg
     title: Aggregate
     in:
       Expr: Expr
@@ -306,17 +329,18 @@ components:
     out:
       O: Expr
 
-
   CountAsteriks:
-      title: "COUNT(*)"
-      attrs:
-        Alias:
-          type: Identifier
-          default: "cnt"
-      out:
-        O: NumericExpr
+    group: agg
+    title: "COUNT(*)"
+    attrs:
+      Alias:
+        type: Identifier
+        default: "cnt"
+    out:
+      O: NumericExpr
 
   And:
+    group: bool
     title: AND
     in:
       A:
@@ -331,6 +355,7 @@ components:
         type: BooleanExpr
 
   Or:
+    group: bool
     title: OR
     in:
       A:
@@ -345,6 +370,7 @@ components:
         type: BooleanExpr
 
   Not:
+    group: bool
     title: NOT
     in:
       I: BooleanExpr
@@ -370,6 +396,7 @@ components:
       O: @T
 
   Eq:
+    group: cmp
     title: =
     in:
       A:
@@ -384,6 +411,7 @@ components:
         type: BooleanExpr
 
   Lt:
+    group: cmp
     title: <
     in:
       A: Expr
@@ -392,6 +420,7 @@ components:
       O: BooleanExpr
 
   LtEq:
+    group: cmp
     title: <=
     in:
       A: Expr
@@ -400,6 +429,7 @@ components:
       O: BooleanExpr
 
   Gt:
+    group: cmp
     title: >
     in:
       A: Expr
@@ -408,6 +438,7 @@ components:
       O: BooleanExpr
 
   GtEq:
+    group: cmp
     title: >=
     in:
       A: Expr
@@ -416,6 +447,7 @@ components:
       O: BooleanExpr
 
   IsNull:
+    group: cmp
     title: IS NULL
     in:
       I: Expr
@@ -423,6 +455,7 @@ components:
       O: BooleanExpr
 
   IsNotNull:
+    group: cmp
     title: IS NOT NULL
     in:
       I: Expr
@@ -430,12 +463,14 @@ components:
       O: BooleanExpr
 
   Null:
+    group: literal
     title: NULL
     out:
       O: NullExpr
 
 
   TypedEq:
+    group: cmp
     title: Typed =
     typeParams: [T]
     in:
@@ -451,11 +486,13 @@ components:
         type: BooleanExpr
 
   CurrentDate:
+    group: datetime
     title: CURRENT_DATE
     out:
       O: DateExpr
 
   Interval_NDays:
+    group: datetime
     title: Interval N Days
     attrs:
       N: Int
@@ -463,6 +500,7 @@ components:
       O: IntervalExpr
 
   GenerateSeries_StartStopInterval:
+    group: datetime
     title: generate_series(start,stop,interval)
     in:
       start:    TimestampExpr
@@ -474,6 +512,7 @@ components:
       O: TimestampExpr
 
   AppendDaysToDate:
+    group: datetime
     title: Date + N days
     in:
       A: DateExpr
@@ -482,6 +521,7 @@ components:
       O: DateExpr
 
   SubtractDaysFromDate:
+    group: datetime
     title: Date - N days
     in:
       A: DateExpr
@@ -490,6 +530,7 @@ components:
       O: DateExpr
 
   CustomSql:
+    group: core
     title: SQL
     typeParams: [T]
     attrs:
@@ -498,6 +539,7 @@ components:
       O: @T
 
   Repeat:
+    group: core
     title: =>>=
     typeParams: [T]
     in:
@@ -505,17 +547,8 @@ components:
     out:
         O: @T
 
-  Param:
-    title: Параметр
-    typeParams: [T]
-    attrs:
-      title:
-        title: Имя
-        type: Any
-    out:
-      O: @T
-
   Result:
+    group: core
     title: Result
     color: "0-#495-#075:20-#335"
     in:
@@ -525,15 +558,17 @@ components:
   #  Specific tables and columns
   # ------------------------------
   Tbl_Order:
-      title: "Тбл.Заказ"
-      attrs:
-        Alias:
-          type: Identifier
-          default: "o"
-      out:
-        O: Tbl_Order
+    group: tables
+    title: "Тбл.Заказ"
+    attrs:
+      Alias:
+        type: Identifier
+        default: "o"
+    out:
+      O: Tbl_Order
 
   Col_Order_DeliveryStatus:
+    group: TblOrder
     title: "Заказ.СтатусДоставки"
     in:
       T: Tbl_Order
@@ -545,6 +580,7 @@ components:
       O: TextColumn
 
   Col_Order_Cost:
+      group: TblOrder
       title: "Заказ.Стоимость"
       in:
         T: Tbl_Order
@@ -556,6 +592,7 @@ components:
         O: NumericColumn
 
   Col_Order_SendDate:
+        group: TblOrder
         title: "Заказ.ДатаОтправки"
         in:
           T: Tbl_Order
@@ -567,6 +604,7 @@ components:
           O: DateColumn
 
   Col_Order_CustomerId:
+      group: TblOrder
       title: "Заказ.IdКлиента"
       in:
         T: Tbl_Order
@@ -578,6 +616,7 @@ components:
         O: IdColumn
 
   Col_Order_Platform:
+      group: TblOrder
       title: "Заказ.Площадка"
       in:
         T: Tbl_Order
@@ -589,6 +628,7 @@ components:
         O: TextColumn
 
   Dict_Order_DeliveryStatus:
+     group: TblOrder
      title: Статус доставки заказа
      attrs:
       S:
@@ -600,6 +640,7 @@ components:
         O: TextExpr
 
   Tbl_Customer:
+    group: tables
     title: "Тбл.Клиент"
     attrs:
        Alias:
@@ -609,6 +650,7 @@ components:
        O: Tbl_Customer
 
   Tbl_LegalEntity:
+    group: tables
     title: "Тбл.ЮрЛицо"
     attrs:
        Alias:
@@ -618,6 +660,7 @@ components:
        O: Tbl_LegalEntity
 
   LegalEntity_FullName:
+    group: TblLegalEntity
     title: "Полное имя клиента"
     in:
       T: Tbl_LegalEntity

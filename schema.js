@@ -234,8 +234,20 @@ var vaxSchema = {
             }
         }
     },
+    "groups": {
+        "core": "Основные элементы",
+        "agg": "Аггрегаты",
+        "bool": "Логические элементы",
+        "datetime": "Работа с датой",
+        "expr": "Выражения",
+        "literal": "Литералы",
+        "tables": "Таблицы",
+        "TblOrder": "Заказ",
+        "TblLegalEntity": "ЮрЛицо"
+    },
     "components": {
         "Select": {
+            "group": "core",
             "title": "SELECT",
             "color": "0-#495-#075:20-#335",
             "in": {
@@ -256,6 +268,7 @@ var vaxSchema = {
             }
         },
         "Subquery": {
+            "group": "core",
             "title": "Subquery",
             "typeParams": [
                 "T"
@@ -271,6 +284,7 @@ var vaxSchema = {
             }
         },
         "SmartJoin": {
+            "group": "core",
             "title": "Smart JOIN",
             "color": "0-#495-#075:20-#335",
             "in": {
@@ -289,6 +303,7 @@ var vaxSchema = {
             }
         },
         "PlainJoin": {
+            "group": "core",
             "title": "JOIN",
             "color": "0-#495-#075:20-#335",
             "in": {
@@ -306,6 +321,7 @@ var vaxSchema = {
             }
         },
         "Table": {
+            "group": "core",
             "title": "Table",
             "color": "0-#195-#0a5:30-#635",
             "width": 150,
@@ -323,6 +339,7 @@ var vaxSchema = {
             }
         },
         "Column": {
+            "group": "core",
             "title": "Pick column",
             "color": "0-#32a-#0a5:40-#03a",
             "in": {
@@ -349,6 +366,7 @@ var vaxSchema = {
             }
         },
         "AllColumns": {
+            "group": "core",
             "title": "*",
             "color": "0-#32a-#0a5:40-#03a",
             "in": {
@@ -364,6 +382,7 @@ var vaxSchema = {
             }
         },
         "GatherColumns": {
+            "group": "core",
             "title": "Gather columns",
             "color": "0-#32a-#0a5:40-#03a",
             "in": {
@@ -399,6 +418,7 @@ var vaxSchema = {
             }
         },
         "OrderBy": {
+            "group": "core",
             "title": "ORDER BY",
             "color": "0-#32a-#0a5:40-#03a",
             "in": {
@@ -424,6 +444,7 @@ var vaxSchema = {
             }
         },
         "GroupBy": {
+            "group": "core",
             "title": "GROUP BY",
             "color": "0-#32d-#aa5:40-#03a",
             "in": {
@@ -439,6 +460,7 @@ var vaxSchema = {
             }
         },
         "Aggregate": {
+            "group": "agg",
             "title": "Aggregate",
             "in": {
                 "Expr": "Expr",
@@ -459,6 +481,7 @@ var vaxSchema = {
             }
         },
         "CountAsteriks": {
+            "group": "agg",
             "title": "COUNT(*)",
             "attrs": {
                 "Alias": {
@@ -471,6 +494,7 @@ var vaxSchema = {
             }
         },
         "And": {
+            "group": "bool",
             "title": "AND",
             "in": {
                 "A": {
@@ -490,6 +514,7 @@ var vaxSchema = {
             }
         },
         "Or": {
+            "group": "bool",
             "title": "OR",
             "in": {
                 "A": {
@@ -509,6 +534,7 @@ var vaxSchema = {
             }
         },
         "Not": {
+            "group": "bool",
             "title": "NOT",
             "in": {
                 "I": "BooleanExpr"
@@ -544,6 +570,7 @@ var vaxSchema = {
             }
         },
         "Eq": {
+            "group": "cmp",
             "title": "=",
             "in": {
                 "A": {
@@ -563,6 +590,7 @@ var vaxSchema = {
             }
         },
         "Lt": {
+            "group": "cmp",
             "title": "<",
             "in": {
                 "A": "Expr",
@@ -573,6 +601,7 @@ var vaxSchema = {
             }
         },
         "LtEq": {
+            "group": "cmp",
             "title": "<=",
             "in": {
                 "A": "Expr",
@@ -583,6 +612,7 @@ var vaxSchema = {
             }
         },
         "Gt": {
+            "group": "cmp",
             "title": "",
             "in": {
                 "A": "Expr",
@@ -593,6 +623,7 @@ var vaxSchema = {
             }
         },
         "GtEq": {
+            "group": "cmp",
             "title": ">=",
             "in": {
                 "A": "Expr",
@@ -603,6 +634,7 @@ var vaxSchema = {
             }
         },
         "IsNull": {
+            "group": "cmp",
             "title": "IS NULL",
             "in": {
                 "I": "Expr"
@@ -612,6 +644,7 @@ var vaxSchema = {
             }
         },
         "IsNotNull": {
+            "group": "cmp",
             "title": "IS NOT NULL",
             "in": {
                 "I": "Expr"
@@ -621,12 +654,14 @@ var vaxSchema = {
             }
         },
         "null": {
+            "group": "literal",
             "title": null,
             "out": {
                 "O": "NullExpr"
             }
         },
         "TypedEq": {
+            "group": "cmp",
             "title": "Typed =",
             "typeParams": [
                 "T"
@@ -649,12 +684,14 @@ var vaxSchema = {
             }
         },
         "CurrentDate": {
+            "group": "datetime",
             "title": "CURRENT_DATE",
             "out": {
                 "O": "DateExpr"
             }
         },
         "Interval_NDays": {
+            "group": "datetime",
             "title": "Interval N Days",
             "attrs": {
                 "N": "Int"
@@ -664,6 +701,7 @@ var vaxSchema = {
             }
         },
         "GenerateSeries_StartStopInterval": {
+            "group": "datetime",
             "title": "generate_series(start,stop,interval)",
             "in": {
                 "start": "TimestampExpr",
@@ -678,6 +716,7 @@ var vaxSchema = {
             }
         },
         "AppendDaysToDate": {
+            "group": "datetime",
             "title": "Date + N days",
             "in": {
                 "A": "DateExpr",
@@ -688,6 +727,7 @@ var vaxSchema = {
             }
         },
         "SubtractDaysFromDate": {
+            "group": "datetime",
             "title": "Date - N days",
             "in": {
                 "A": "DateExpr",
@@ -698,6 +738,7 @@ var vaxSchema = {
             }
         },
         "CustomSql": {
+            "group": "core",
             "title": "SQL",
             "typeParams": [
                 "T"
@@ -710,6 +751,7 @@ var vaxSchema = {
             }
         },
         "Repeat": {
+            "group": "core",
             "title": "=>>=",
             "typeParams": [
                 "T"
@@ -721,22 +763,8 @@ var vaxSchema = {
                 "O": "@T"
             }
         },
-        "Param": {
-            "title": "Параметр",
-            "typeParams": [
-                "T"
-            ],
-            "attrs": {
-                "title": {
-                    "title": "Имя",
-                    "type": "Any"
-                }
-            },
-            "out": {
-                "O": "@T"
-            }
-        },
         "Result": {
+            "group": "core",
             "title": "Result",
             "color": "0-#495-#075:20-#335",
             "in": {
@@ -744,6 +772,7 @@ var vaxSchema = {
             }
         },
         "Tbl_Order": {
+            "group": "tables",
             "title": "Тбл.Заказ",
             "attrs": {
                 "Alias": {
@@ -756,6 +785,7 @@ var vaxSchema = {
             }
         },
         "Col_Order_DeliveryStatus": {
+            "group": "TblOrder",
             "title": "Заказ.СтатусДоставки",
             "in": {
                 "T": "Tbl_Order"
@@ -771,6 +801,7 @@ var vaxSchema = {
             }
         },
         "Col_Order_Cost": {
+            "group": "TblOrder",
             "title": "Заказ.Стоимость",
             "in": {
                 "T": "Tbl_Order"
@@ -786,6 +817,7 @@ var vaxSchema = {
             }
         },
         "Col_Order_SendDate": {
+            "group": "TblOrder",
             "title": "Заказ.ДатаОтправки",
             "in": {
                 "T": "Tbl_Order"
@@ -801,6 +833,7 @@ var vaxSchema = {
             }
         },
         "Col_Order_CustomerId": {
+            "group": "TblOrder",
             "title": "Заказ.IdКлиента",
             "in": {
                 "T": "Tbl_Order"
@@ -816,6 +849,7 @@ var vaxSchema = {
             }
         },
         "Col_Order_Platform": {
+            "group": "TblOrder",
             "title": "Заказ.Площадка",
             "in": {
                 "T": "Tbl_Order"
@@ -831,6 +865,7 @@ var vaxSchema = {
             }
         },
         "Dict_Order_DeliveryStatus": {
+            "group": "TblOrder",
             "title": "Статус доставки заказа",
             "attrs": {
                 "S": {
@@ -846,6 +881,7 @@ var vaxSchema = {
             }
         },
         "Tbl_Customer": {
+            "group": "tables",
             "title": "Тбл.Клиент",
             "attrs": {
                 "Alias": {
@@ -858,6 +894,7 @@ var vaxSchema = {
             }
         },
         "Tbl_LegalEntity": {
+            "group": "tables",
             "title": "Тбл.ЮрЛицо",
             "attrs": {
                 "Alias": {
@@ -870,6 +907,7 @@ var vaxSchema = {
             }
         },
         "LegalEntity_FullName": {
+            "group": "TblLegalEntity",
             "title": "Полное имя клиента",
             "in": {
                 "T": "Tbl_LegalEntity"
