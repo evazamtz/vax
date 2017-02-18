@@ -2601,6 +2601,7 @@
                     "title": "Click to change this value ...",
                     "cursor": "pointer"
                 });
+                self.rect.click(function() {self.invokeValuePicker();});
                 this.node.getDraggingGroup().addRect(self.rect);
 
                 self.caption = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35 - 15, self.config.title);
@@ -2613,7 +2614,7 @@
                     "title": "Click to change this value ...",
                     "cursor": "pointer"
                 });
-
+                self.caption.click(function() {self.invokeValuePicker();});
                 this.node.getDraggingGroup().addText(self.caption);
             };
 
@@ -2635,7 +2636,7 @@
                     x: nodeX + 20,
                     y: nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35,
                     text: valueTitle,
-                    maxWidth: 100, // TODO: change dynamically from node
+                    maxWidth: self.node.getWidth() - 20 - 5,
                     maxHeight: 20,
                     textStyle: {
                         "text-anchor": 'start',
@@ -2687,17 +2688,6 @@
             this.init = function () {
 
                 self.createCaption();
-                self.invalidateValueHolder();
-
-                // change handler
-                _.each([self.rect, self.caption], function(el)
-                {
-                    el.click(function()
-                    {
-                        self.invokeValuePicker();
-                    });
-                });
-
             };
 
             this.init();
@@ -2904,6 +2894,9 @@
                 _.each(self.inputSockets, function(socket) { socket.alignToNodeWidth(); socket.attachToNodeDraggingGroup(); });
                 _.each(self.outputSockets, function(socket) { socket.alignToNodeWidth(); socket.attachToNodeDraggingGroup(); });
 
+                // invalidate attributes value holders
+                _.each(self.attributes, function(attribute) { attribute.invalidateValueHolder(); });
+
                 // add userFunction marker if needed
                 if (self.isUserFunction())
                 {
@@ -2914,7 +2907,7 @@
                         "fill": "#ff0",
                         "font-size": "16",
                         "cursor": "help",
-                        'font-weight':"bold",
+                        'font-weight':"bold"
                     });
                     self.draggingGroup.addText(self.userFunctionMarker);
                 }
