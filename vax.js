@@ -1431,7 +1431,22 @@
 
             memoValuePicker.invoke('', function(commentText)
             {
-                self.createComment({x: self.newCommentX, y: self.newCommentY, text: commentText});
+                var commentConfig = {x: self.newCommentX, y: self.newCommentY, text: commentText};
+
+                // if we have selected nodes -> create comment, surrounding them into group
+                var selectionBb = self.selection.getSelectedNodesBoundingBox();
+                if (selectionBb)
+                {
+                    var padding    = 15;
+                    var topPadding = 45;
+
+                    commentConfig.x      = selectionBb.left - padding;
+                    commentConfig.y      = selectionBb.top - topPadding;
+                    commentConfig.width  = selectionBb.right - selectionBb.left + 2 * padding;
+                    commentConfig.height = selectionBb.bottom - selectionBb.top + topPadding + padding;
+                }
+
+                self.createComment(commentConfig);
             });
         };
 
@@ -1871,6 +1886,26 @@
                         vaxRoot.wires[wireId].highlightSelection();
                     }
                 });
+            };
+
+            this.getSelectedNodesBoundingBox = function()
+            {
+                var self = this;
+
+                if (!this.nodesIds.length)
+                {
+                    return undefined;
+                }
+
+                var nodesBoxes = _.map(this.nodesIds, function(nodeId) { return self.vaxRoot.nodes[nodeId].getBoundingBox(); });
+
+                return {
+                    left:   _.min( _.map(nodesBoxes, function(box) { return box.left }) ),
+                    top:    _.min( _.map(nodesBoxes, function(box) { return box.top  }) ),
+
+                    right:  _.max( _.map(nodesBoxes, function(box) { return box.right }) ),
+                    bottom: _.max( _.map(nodesBoxes, function(box) { return box.bottom }) )
+                };
             };
 
             this.removeSelectedElements = function(forced)
