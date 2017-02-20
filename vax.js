@@ -3469,6 +3469,9 @@
             this.id = id;
             this.draggingGroup = null;
 
+            this.minWidth = 100;
+            this.minHeight = 60;
+
             this.config = _.defaults(config, {
                 x: 0,
                 y: 0,
@@ -3484,48 +3487,101 @@
             // initialize functions
             this.init = function()
             {
-                this.invalidate(self.config.x, self.config.y);
+                this.invalidate(self.config.x, self.config.y, self.config.width, self.config.height);
             };
 
-            this.invalidate = function(x, y)
+            this.invalidateByMoveContainer = function()
             {
-                if (self.comment)
+                var mc = this.moveContainer;
+                this.invalidate(mc.attr('x'), mc.attr('y'), mc.attr('width'), mc.attr('height'));
+            };
+
+
+            this.invalidate = function(x, y, width, height)
+            {
+                if (self.draggingGroup)
                 {
-                    self.comment.remove();
+                    self.draggingGroup.remove();
                 }
 
-                if (self.bgRect)
-                {
-                    self.bgRect.remove();
-                }
-
-                if (self.moveContainer)
-                {
-                    self.moveContainer.remove();
-                }
-
-                var padding = 15;
+                // create new ones
+                var padding = 10;
 
                 var textStyle = {
                     "text-anchor": "start",
                     "fill": "#ddd",
                     "font-family": "Tahoma",
-                    "font-size": "14pt"
+                    "font-size": "14pt",
+                    "font-weight": "bold"
                 };
 
-                // bounding box text
-                var bbText = self.comment = raphael.text(x + padding, y, $.trim(self.text));
-                bbText.attr(textStyle);
+                if (!width)
+                {
+                    var paragraph = raphael.paragraph({
+                        x: x + padding,
+                        y: y + padding + 3,
+                        maxHeight: 20,
+                        text: self.transformText(self.text),
+                        textStyle: textStyle
+                    });
 
-                var width  = bbText.getBBox().width + padding * 2;
-                var height = bbText.getBBox().height + padding * 2;
+                    self.titleText = paragraph[0];
+                    width = self.titleText.getBBox().width + 2 * padding;
+                }
+                else
+                {
+                    var paragraph = raphael.paragraph({
+                        x: x + padding,
+                        y: y + padding + 3,
+                        maxHeight: 20,
+                        maxWidth: width - padding * 2,
+                        text: self.transformText(self.text),
+                        textStyle: textStyle
+                    });
 
-                bbText.attr({y: y + height / 3.5}); // sp weird shit is happening, text starts to float upwards if multiline (probably fix it later with paragraph set)
+                    self.titleText = paragraph[0];
+                }
 
-                // create background
-                self.bgRect = raphael.rect(x, y, width, height - padding, 5);
-                self.bgRect.attr({fill: "0-#222-#111", opacity: ".8", "stroke": "#bbb", "stroke-width": "1px"});
+                if (!height)
+                {
+                    height = self.minHeight;
+                }
+
+                // bg graphics
+                self.bgRect = raphael.rect(x, y, width, height, 10);
+                self.bgRect.attr({
+                    fill: '#555',
+                    opacity: .5,
+                    stroke: "#fff",
+                    "stroke-opacity": 1
+                });
                 self.bgRect.toBack();
+
+                self.captionRect2 = raphael.rect(x, y + 10, width, 20);
+                self.captionRect2.attr({
+                    fill: '0-#111:20-#000',
+                    "stroke-width": 0
+                });
+                self.captionRect2.toBack();
+
+                // caption rect
+                self.captionRect = raphael.rect(x, y, width, 30, 10);
+                self.captionRect.attr({
+                    fill: '0-#111:20-#000',
+                    "stroke-width": 0
+                });
+                self.captionRect.toBack();
+
+                // caption border
+                self.captionBorder = raphael.rect(x, y + 30, width, 2);
+                self.captionBorder.attr({
+                    fill: '#777',
+                    "stroke-width": 0
+                });
+
+                // create move container
+                self.moveContainer = raphael.rect(x, y, width, height, 10);
+                self.moveContainer.attr({fill: "#000", opacity: 0, "cursor": "move", "title": self.text + "\n\nDouble click to change the comment text ..."});
 
                 // create delete button
                 self.deleteCircle = raphael.circle(x + width, y, 10);
@@ -3550,25 +3606,89 @@
                     );
                 });
 
-                // create move container
-                self.moveContainer = raphael.rect(x, y, width, height, 5);
-                self.moveContainer.attr({fill: "#000", opacity: "0", "cursor": "move", "title": "Double click to change the comment text ..."});
+                // create sizers
+                var sizerThickness = 15;
+                
+                self.leftSizer     = raphael.rect(x - sizerThickness / 2, y + 30, sizerThickness, height - 30 - sizerThickness / 2);
+                self.leftSizer.attr({cursor: 'e-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.leftSizer.data('axes', {left: true});
+                
+                self.rightSizer    = raphael.rect(x + width - sizerThickness / 2, y + 30, sizerThickness, height - 30 - sizerThickness / 2);
+                self.rightSizer.attr({cursor: 'e-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.rightSizer.data('axes', {right: true});
+                
+                self.bottomSizer   = raphael.rect(x + sizerThickness / 2, y + height - sizerThickness / 2, width - sizerThickness, sizerThickness);
+                self.bottomSizer.attr({cursor: 'n-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.bottomSizer.data('axes', {bottom: true, 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                
+                self.blCornerSizer = raphael.rect(x - sizerThickness / 2, y + height - sizerThickness / 2, sizerThickness, sizerThickness);
+                self.blCornerSizer.attr({cursor: 'ne-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.blCornerSizer.data('axes', {bottom: true, left: true});
+                
+                self.brCornerSizer = raphael.rect(x + width - sizerThickness / 2, y + height - sizerThickness / 2, sizerThickness, sizerThickness);
+                self.brCornerSizer.attr({cursor: 'nw-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.brCornerSizer.data('axes', {bottom: true, right: true});
+
+                _.each([self.leftSizer, self.rightSizer, self.bottomSizer, self.blCornerSizer, self.brCornerSizer], function(el)
+                {
+                    el.drag(
+                        function (dx, dy, nx, ny)
+                        {
+                            var axes = el.data('axes');
+
+                            if (axes.left)
+                            {
+                                self.moveContainer.attr('x', Math.min(self.sizerX + self.sizerW - self.minWidth, self.sizerX + dx));
+                                self.moveContainer.attr('width', Math.max(self.minWidth, self.sizerW - dx));
+                            }
+
+                            if (axes.right)
+                            {
+                                self.moveContainer.attr('width', Math.max(self.minWidth, self.sizerW + dx));
+                            }
+
+                            if (axes.bottom)
+                            {
+                                self.moveContainer.attr('height', Math.max(self.minHeight, self.sizerH + dy));
+                            }
+                        },
+
+                        function (x, y) {
+                            self.getVAX().isDragging = true;
+
+                            self.moveContainer.attr({opacity: '.4'});
+
+                            self.sizerX = self.moveContainer.attr('x');
+                            self.sizerY = self.moveContainer.attr('y');
+                            self.sizerW = self.moveContainer.attr('width');
+                            self.sizerH = self.moveContainer.attr('height');
+
+                        },
+
+                        function (evt) {
+                            self.getVAX().isDragging = false;
+                            self.moveContainer.attr({opacity: 0});
+                            self.invalidateByMoveContainer();
+                        }
+                    );
+                });
 
                 // group shit for dragging
                 self.draggingGroup = new VaxDraggingGroup(self.getVAX(), self.moveContainer);
-                self.draggingGroup.addRect(self.bgRect);
-                self.draggingGroup.addText(self.comment);
+                self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2).addRect(self.captionBorder);
+                self.draggingGroup.addText(self.titleText);
                 self.draggingGroup.addCircle(self.deleteCircle);
                 self.draggingGroup.addText(self.deleteText);
+                self.draggingGroup.addRect(self.leftSizer).addRect(self.rightSizer).addRect(self.bottomSizer).addRect(self.blCornerSizer).addRect(self.brCornerSizer);
 
-                // 2x click for comment edditing
+                // 2x click for comment editing
                 self.moveContainer.dblclick(function()
                 {
                     var memoPicker = self.getVAX().valuePickers.memo;
                     memoPicker.invoke(self.text, function(newComment)
                     {
                         self.text = newComment;
-                        self.invalidate(self.moveContainer.attr('x'), self.moveContainer.attr('y'));
+                        self.invalidateByMoveContainer();
                     });
                 });
             };
@@ -3601,6 +3721,11 @@
             this.getText = function()
             {
                 return this.text;
+            };
+
+            this.transformText = function(s)
+            {
+               return $.trim(s.replace("\n", ' '));
             };
 
             this.move = function(nx, ny)
