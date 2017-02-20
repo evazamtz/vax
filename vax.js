@@ -1675,6 +1675,22 @@
 
                 self.rootRect.remove();
             };
+
+            this.toBack = function()
+            {
+                _.each(self.children, function(child)
+                {
+                    child.shape.toBack();
+                });
+            };
+
+            this.toFront = function()
+            {
+                _.each(self.children, function(child)
+                {
+                    child.shape.toFront();
+                });
+            };
         };
 
         function VaxSelection(vax)
@@ -3548,6 +3564,14 @@
                     height = self.minHeight;
                 }
 
+                // create move container
+                self.moveContainer = raphael.rect(x, y, width, height, 10);
+                self.moveContainer.attr({fill: "#000", opacity: 0, "cursor": "move", "title": self.text + "\n\nDouble click to change the comment text ..."});
+                self.moveContainer.toBack();
+
+                // bring title text behind move container
+                self.titleText.toBack();
+
                 // bg graphics
                 self.bgRect = raphael.rect(x, y, width, height, 10);
                 self.bgRect.attr({
@@ -3579,10 +3603,7 @@
                     fill: '#777',
                     "stroke-width": 0
                 });
-
-                // create move container
-                self.moveContainer = raphael.rect(x, y, width, height, 10);
-                self.moveContainer.attr({fill: "#000", opacity: 0, "cursor": "move", "title": self.text + "\n\nDouble click to change the comment text ..."});
+                self.captionBorder.toBack();
 
                 // create delete button
                 self.deleteCircle = raphael.circle(x + width, y, 10);
@@ -3695,6 +3716,8 @@
                 self.draggingGroup.addCircle(self.deleteCircle);
                 self.draggingGroup.addText(self.deleteText);
                 self.draggingGroup.addRect(self.leftSizer).addRect(self.rightSizer).addRect(self.bottomSizer).addRect(self.topSizer).addRect(self.blCornerSizer).addRect(self.brCornerSizer).addRect(self.tlCornerSizer);
+
+                // move all comments to back so u can select nodes
 
                 // handle comment dragging
                 self.draggingGroup.on('dragstart', function()
