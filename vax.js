@@ -3573,7 +3573,7 @@
                 self.captionRect.toBack();
 
                 // caption border
-                self.captionBorder = raphael.rect(x, y + 30, width, 2);
+                self.captionBorder = raphael.rect(x, y + 30, width, 1);
                 self.captionBorder.attr({
                     fill: '#777',
                     "stroke-width": 0
@@ -3607,13 +3607,17 @@
                 });
 
                 // create sizers
-                var sizerThickness = 15;
-                
-                self.leftSizer     = raphael.rect(x - sizerThickness / 2, y + 30, sizerThickness, height - 30 - sizerThickness / 2);
+                var sizerThickness = 18;
+
+                self.topSizer     = raphael.rect(x + sizerThickness / 2, y - sizerThickness / 2, width - sizerThickness, sizerThickness);
+                self.topSizer.attr({cursor: 'n-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.topSizer.data('axes', {top: true});
+
+                self.leftSizer     = raphael.rect(x - sizerThickness / 2, y + sizerThickness / 2, sizerThickness, height - sizerThickness / 2);
                 self.leftSizer.attr({cursor: 'e-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
                 self.leftSizer.data('axes', {left: true});
                 
-                self.rightSizer    = raphael.rect(x + width - sizerThickness / 2, y + 30, sizerThickness, height - 30 - sizerThickness / 2);
+                self.rightSizer    = raphael.rect(x + width - sizerThickness / 2, y + sizerThickness, sizerThickness, height - sizerThickness / 2);
                 self.rightSizer.attr({cursor: 'e-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
                 self.rightSizer.data('axes', {right: true});
                 
@@ -3629,7 +3633,11 @@
                 self.brCornerSizer.attr({cursor: 'nw-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
                 self.brCornerSizer.data('axes', {bottom: true, right: true});
 
-                _.each([self.leftSizer, self.rightSizer, self.bottomSizer, self.blCornerSizer, self.brCornerSizer], function(el)
+                self.tlCornerSizer = raphael.rect(x - sizerThickness / 2, y - sizerThickness / 2, sizerThickness, sizerThickness);
+                self.tlCornerSizer.attr({cursor: 'nw-resize', 'fill': '#000', 'opacity': 0, 'stroke-width': 0});
+                self.tlCornerSizer.data('axes', {top: true, left: true});
+
+                _.each([self.leftSizer, self.rightSizer, self.topSizer, self.bottomSizer, self.blCornerSizer, self.brCornerSizer, self.tlCornerSizer], function(el)
                 {
                     el.drag(
                         function (dx, dy, nx, ny)
@@ -3647,6 +3655,12 @@
                                 self.moveContainer.attr('width', Math.max(self.minWidth, self.sizerW + dx));
                             }
 
+                            if (axes.top)
+                            {
+                                self.moveContainer.attr('y', Math.min(self.sizerY + self.sizerH - self.minHeight, self.sizerY + dy));
+                                self.moveContainer.attr('height', Math.max(self.minHeight, self.sizerH - dy));
+                            }
+
                             if (axes.bottom)
                             {
                                 self.moveContainer.attr('height', Math.max(self.minHeight, self.sizerH + dy));
@@ -3656,7 +3670,7 @@
                         function (x, y) {
                             self.getVAX().isDragging = true;
 
-                            self.moveContainer.attr({opacity: '.4'});
+                            self.moveContainer.attr({opacity: '.4', 'stroke-width': 2, 'stroke': '#eee', 'stroke-dasharray': ['.']});
 
                             self.sizerX = self.moveContainer.attr('x');
                             self.sizerY = self.moveContainer.attr('y');
@@ -3667,7 +3681,7 @@
 
                         function (evt) {
                             self.getVAX().isDragging = false;
-                            self.moveContainer.attr({opacity: 0});
+                            self.moveContainer.attr({opacity: 0, 'stroke-width': 0});
                             self.invalidateByMoveContainer();
                         }
                     );
@@ -3679,7 +3693,41 @@
                 self.draggingGroup.addText(self.titleText);
                 self.draggingGroup.addCircle(self.deleteCircle);
                 self.draggingGroup.addText(self.deleteText);
-                self.draggingGroup.addRect(self.leftSizer).addRect(self.rightSizer).addRect(self.bottomSizer).addRect(self.blCornerSizer).addRect(self.brCornerSizer);
+                self.draggingGroup.addRect(self.leftSizer).addRect(self.rightSizer).addRect(self.bottomSizer).addRect(self.topSizer).addRect(self.blCornerSizer).addRect(self.brCornerSizer).addRect(self.tlCornerSizer);
+
+                // handle comment dragging
+                self.draggingGroup.on('dragstart', function()
+                {
+                    self.draggingGroupsOffsets = [];
+
+                    // save grouped nodes Ids offsets
+                    _.each(self.getVAX().selection.testByRect(self.getBoundingBox()).nodesIds, function(nodeId)
+                    {
+                        var node = self.getVAX().nodes[nodeId];
+                        if (node)
+                        {
+                            var nodeDraggingGroup = node.getDraggingGroup();
+                            self.draggingGroupsOffsets.push({
+                                draggingGroup: nodeDraggingGroup,
+                                dx: nodeDraggingGroup.getX() - self.draggingGroup.getX(),
+                                dy: nodeDraggingGroup.getY() - self.draggingGroup.getY()
+                            });
+                        }
+                    });
+                });
+
+                self.draggingGroup.on('drag', function(evt, x, y)
+                {
+                    _.each(self.draggingGroupsOffsets, function(item)
+                    {
+                        item.draggingGroup.move(x + item.dx, y + item.dy);                        
+                    });
+                });
+
+                self.draggingGroup.on('dragend', function()
+                {
+                    self.draggingGroupsOffsets = [];
+                });
 
                 // 2x click for comment editing
                 self.moveContainer.dblclick(function()
