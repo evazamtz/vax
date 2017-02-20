@@ -1086,16 +1086,17 @@
         {
             var self = this;
 
-            var nodesBoxes = _.map(this.nodes, function(node) { return node.getBoundingBox(); });
+            var nodesBoxes    = _.map(this.nodes,    function(node)    { return node.getBoundingBox(); });
+            var commentsBoxes = _.map(this.comments, function(comment) { return comment.getBoundingBox(); });
 
-            nodesBoxes.push({left: 0, top: 0, right: self.canvasWidth, bottom: self.canvasHeight});
+            var allBoxes = [{left: 0, top: 0, right: self.canvasWidth, bottom: self.canvasHeight}].concat(nodesBoxes, commentsBoxes);
 
             return {
-                left:   _.min( _.map(nodesBoxes, function(box) { return box.left }) ),
-                top:    _.min( _.map(nodesBoxes, function(box) { return box.top  }) ),
+                left:   _.min( _.map(allBoxes, function(box) { return box.left }) ),
+                top:    _.min( _.map(allBoxes, function(box) { return box.top  }) ),
 
-                right:  _.max( _.map(nodesBoxes, function(box) { return box.right }) ),
-                bottom: _.max( _.map(nodesBoxes, function(box) { return box.bottom }) )
+                right:  _.max( _.map(allBoxes, function(box) { return box.right }) ),
+                bottom: _.max( _.map(allBoxes, function(box) { return box.bottom }) )
             };
         };
 
@@ -3487,17 +3488,17 @@
             // initialize functions
             this.init = function()
             {
-                this.invalidate(self.config.x, self.config.y, self.config.width, self.config.height);
+                this.invalidate(self.config.x, self.config.y, self.config.width, self.config.height, true);
             };
 
             this.invalidateByMoveContainer = function()
             {
                 var mc = this.moveContainer;
-                this.invalidate(mc.attr('x'), mc.attr('y'), mc.attr('width'), mc.attr('height'));
+                this.invalidate(mc.attr('x'), mc.attr('y'), mc.attr('width'), mc.attr('height'), false);
             };
 
 
-            this.invalidate = function(x, y, width, height)
+            this.invalidate = function(x, y, width, height, initial)
             {
                 if (self.draggingGroup)
                 {
@@ -3727,6 +3728,10 @@
                 self.draggingGroup.on('dragend', function()
                 {
                     self.draggingGroupsOffsets = [];
+
+                    // once everything is done, resize scrollbars sizes and save history
+                    self.getVAX().refreshScrollSliders();
+                    self.getVAX().history.pushAction('commentDragged');
                 });
 
                 // 2x click for comment editing
@@ -3739,6 +3744,13 @@
                         self.invalidateByMoveContainer();
                     });
                 });
+
+                // once everything is done, resize scrollbars sizes and save history if this is not initial creation
+                if (!initial)
+                {
+                    self.getVAX().refreshScrollSliders();
+                    self.getVAX().history.pushAction('commentInvalidated');
+                }
             };
 
             this.getId = function()
@@ -3759,6 +3771,16 @@
                     right: x + w,
                     bottom: y + h
                 };
+            };
+
+            this.getWidth = function()
+            {
+                return this.moveContainer.attr('width');
+            };
+
+            this.getHeight = function()
+            {
+                return this.moveContainer.attr('height');
             };
 
             this.getDraggingGroup = function()
@@ -4208,7 +4230,7 @@
             var commentsPickles = _.map(commentsToPickle, function(comment)
             {
                 var commentBb = comment.getBoundingBox();
-                return {x: commentBb.left, y: commentBb.top, t: comment.getText()};
+                return {t: comment.getText(), x: commentBb.left, y: commentBb.top, w: comment.getWidth(), h: comment.getHeight()};
             });
 
             // gather everything in a blueprint
@@ -4386,7 +4408,7 @@
             {
                 _.each(graph.comments, function(commentPickle)
                 {
-                    self.createComment({x: commentPickle.x, y: commentPickle.y, text: commentPickle.t});
+                    self.createComment({x: commentPickle.x, y: commentPickle.y, width: commentPickle.w, height: commentPickle.h, text: commentPickle.t});
                 });
             }
 
