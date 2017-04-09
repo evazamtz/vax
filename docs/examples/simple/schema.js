@@ -4,6 +4,17 @@ var exampleSchema = {
 			"color": "#fff"
 		}
 	},
+	"dictionaries": {
+		"fns": {
+			title: "yolo",
+			"values": {
+				"sin": "sin(x)",
+				"cos": "cos(x)",
+				"tg": "tan(x)",
+				"ctg": "cot(x)"
+			}
+		}
+	},
 	"components": {
 		"Literal": {
 			"attrs": {
@@ -20,6 +31,25 @@ var exampleSchema = {
 			},
 			"out": {
 				"O": "Numeric"
+			}
+		},
+		"Trig. Function": {
+			"in": {
+				"I": "Numeric"
+			},
+			"out": {
+				"O": "Numeric"
+			},
+			"attrs": {
+				"Fn": {
+					"type": "Any",
+					"default": "sin",
+					"valuePicker": {
+						"type": "dictionary",
+						"dictionary": "fns"
+					}
+				}
+
 			}
 		}
 	}

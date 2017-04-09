@@ -3,7 +3,365 @@ layout: default
 ---
 
 <h1>Schema</h1>
-Since VAX is not bounded to any specific domain language, you can configure it to your own one!
-<h2>Table Of Contents</h2>
+<p>Since VAX is not bounded to any specific domain language, you can configure it to your own!</p>
+
+<p>
+    Table of contents:
+    <ul>
+        <li>Schema skeleton</li>
+        <li>Colors</li>
+        <li>Types</li>
+        <li>Groups</li>
+        <li>Components</li>
+    </ul>
+</p>
+
+<h3>Schema skeleton</h3>
+<p>Advanced schema skeleton has following sections:<p>
+<p>
+{% highlight yaml %}
+colors:
+    # Color aliases for future referencing
+types:
+    # Define types, their inheritance and type parameters
+groups:
+    # Define groups of components
+components:
+    # Define your components and their structure
+dictionaries:
+    # Define key-value dictionaries for using in value pickers
+{% endhighlight %}
+</p>
+<p>No section is required, but obviosly you'll want to define two main sections, which are <code>types</code> and <code>components</code>.
+
+<h3>Colors</h3>
+<p>Here you define list of color aliases that can referenced thoughout the remainding schema:<p>
+<p>
+{% highlight yaml %}
+colors:
+  relation: "#cf3"
+  table: "#0ff"
+  coreNode: "0-#f80-#da0:50-#520"
+  tableNode: "0-#0ff-#0dd:20-#111"
+
+types:
+  FromClause:
+    color: @relation # Will be substitued with "#cf3"
+    title: FROM
+
+components:
+  Select:
+    group: core
+    title: Запрос (SELECT)
+    color: @coreNode # Here we use a color alias again
+    # ...
+{% endhighlight %}
+</p>
+<p>Color formats are enlisted at <a href="http://dmitrybaranovskiy.github.io/raphael/reference.html#Element.attr">RaphaelJS docs</a> (bottom section of <code>Element.attr()</code>).</p>
+
+
+<h3>Types</h3>
+<p>Types in VAX are somewhat similar to types, that inhabit statically-typed programming languages like Java/C++/Scala. Especially Scala :) <p>
+<p>Where do you use types? Nodes in VAX have input and output sockets. And they are typed the way that a type of an output socket must conform the corresponding input socket type.
+    Types help building valid blueprints, that are easier to validate and interpret. They also guide end users when they're blueprinting.
+</p>
+<p>A VAX type can either extend others or be parametrized:</p>
+<p>
+{% highlight yaml %}
+types:
+  # Any is a supertype
+  Expr: # Expr extends Any
+    color: "#fff" # The wires of this type will be colored as "#fff"
+    title: Expression # Provide meaningful title, that'll be displayed on a blueprint
+  Integral:
+    color: @num # Use color alises for your convience
+    extends: Expr # Integral extends Expr and Any
+  Numeric:
+    extends: Integral # Numeric extends Integral => Numeric extends Expr, plus Numeric extends Any
+    color: @num
+  String:
+    extends: [Expr]
+    color: @str
+    title: Text
+  NumericString:
+    extends: [Numeric, String] # We can define multi-inheritance
+    color: @str
+    title: Text with a number
+  List:
+    typeParams: [A] # This is like a type constructor, so we'll have to specify 'T' with a real type, e.g. List[Numeric]
+    color: @arr
+  Map:
+    typeParams: [A,B] # Yep, we can have multiple type parameters, e.g. Map[String,Numeric], but I doubt that you'll need one :)
+{% endhighlight %}
+</p>
+<p>Let's see how components use types:</p>
+<p>
+{% highlight yaml %}
+components:
+    ToString: # def ToString(I:Any):String = I.toString
+        in:
+            I: Any # Just usual type
+        out:
+            O: String
+
+    Repeat: # def Repeat[T](I: T):T = I
+        typeParams: [T] # Node will ask for specifing type parameter 'T'
+        in:
+            I: @T # Using parametrized type
+        out:
+            O: @T
+
+    Plus: # def Plus[T <: Expr](A: T, B: T): T = A + B
+        typeParams: [T]
+        typeBounds: {T: {<: Expr}} # Type parameter 'T' is upper bounded by type 'Expr'
+                                   # which means we have to provide a type that inherits from 'Expr'
+        in:
+            A: @T
+            B: @T
+        out:
+            O: @T
+
+    ListLength: # def ListLength(L: List[Any]):Numeric = L.size
+        in:
+            L: List[Any] # Don't forget about the supertype Any
+        out:
+            O: Numeric
+
+    ZipWithIndeces: # def ZipWithIndices[T](A: List[T]):Map[Numeric,T] = ...
+        typeParams: [T]
+        in:
+            A: List[@T]
+        out:
+            M: Map[Numeric,@T] # Crazy stuff!
+
+{% endhighlight %}
+</p>
+<p>Apparently, you extend types from others and define paremetrized types. Also don't forget to set colors and titles.</p>
+<p>While you define components you reference types withing input and output sockets. You also can have type parameters on a particular component and the use it by alias, e.g. <code>@T</code>.</p>
+<p>The weird syntax <code>typeBounds: {T: {&lt: Expr}}</code> in terms of YAML means:</p>
+<p>
+{% highlight yaml %}
+typeBounds:
+    T:
+        "<": Expr
+{% endhighlight %}
+</p>
+<p>and defines an upper type bound from 'Expr' for type parameter 'T'.</p>
+<p>When a user wants to create a node from a component that has type parameters, the editor asks to specify them, and then substitures type aliases with real types. E.g. for a component:</p>
+<p>
+{% highlight yaml %}
+IfThenElse:
+    typeParams: [T]
+    in:
+        Condition: Boolean
+        onTrue: @T
+        onFalse: @T
+    out:
+        O: @T
+{% endhighlight %}
+</p>
+<p>We get:</p>
+<img src="{{ '/assets/images/node_type_parameter.png' | relative_url }}" class="img-thumbnail"/>
+
+
+
+<h3>Groups</h3>
+<p>When the number of components grows, it's getting hard to navigate through them. You can put components into related groups, which are then displayed in component selector:<p>
+<img src="{{ '/assets/images/grouped_components.png' | relative_url }}" class="img-thumbnail"/>
+<p>
+{% highlight yaml %}
+groups:
+  core: Core elements
+  ops: Basic calculations
+  bool: Logic operations
+  str: Working with strings
+
+components:
+    Result:
+        group: core # 'Result' component is now in 'core' group
+        in:
+          I: Any
+
+    ToString:
+        group: str # Put 'ToString' to string operations :)
+        in:
+          I: Any
+        out:
+          O: String
+{% endhighlight %}
+</p>
+<p>If you don't specify the group of any component, it's getting placed into 'Uncategorized' group, which is one of system groups:</p>
+<p>
+{% highlight javascript %}
+return _.defaults(schema.groups, {
+  '_default':       'Uncategorized',
+  '_userFunctions': 'User functions',
+  '_ufElements':    'User functions elements'
+});
+{% endhighlight %}
+</p>
+<p>It's recommended that you don't use leading underscore in your groups names.</p>
+
+
+<h3>Components</h3>
+<p>Components are building blocks of your language or domain. In conjuction with types you can define very rich language, and use type system contraints to be sure you get valid blueprints.
+    End users can go even further and organize basic components into functions and reuse them later, thus enriching the design language.
+</p>
+<p>So a component is a template for a real blueprint node. The template containts input and output sockets definitions, attributes definitions, type parameters with type bounds
+    and of course stuff like title, color and group. See <a href="{{ '/editor.html' | relative_url }}">editor section</a> for visual reference.<p>
+<p>
+<p>Minimal component definition doesn't really require anything:</p>
+<p>
+{% highlight yaml %}
+components:
+    Useless: # Unique name, the one you'll get within serialized tree
+{% endhighlight %}
+</p>
+
+<p>In order to be usefull a node needs at least one input or output socket definition:</p>
+<p>
+{% highlight yaml %}
+components:
+    ToString:
+        in: # input sockets section
+          I: Any # We defined an input with a name 'I' that accepts a value of type 'Any'
+        out: # output sockets section
+          O: String # We defined an ouput with name 'O' that produces a value of type 'String'
+{% endhighlight %}
+</p>
+<p>Socket names should be unique within their respective section.</p>
+
+<p>You can also give titles to your sockets:</p>
+<p>
+{% highlight yaml %}
+components:
+    Plus:
+        in:
+          L:
+            title: Left
+            type: Expr
+          R:
+            title: Right
+            type: Expr
+        out:
+           R:
+            title: Result
+            type: Expr
+{% endhighlight %}
+</p>
+
+<p>To make your component more user-friendly you can give it a title, a color and a group:</p>
+<p>
+{% highlight yaml %}
+components:
+    Result:
+        title: Resulting value    # You'll see that in the editor
+        color: @coreNode          # The color of your node, color aliases are allowed
+        group: core               # The name of the group, which contains this component
+        in:
+          I: Any
+{% endhighlight %}
+</p>
+
+<p>Sometimes you need to provide a node with an attribute that can be set by a user on the blueprint. Minimal attribute definition consists of a name and a type:</p>
+<p>
+{% highlight yaml %}
+components:
+    NumberLiteral:
+        attrs: # attributes section
+            V: Numeric # Unique attribute name within component
+        out:
+          O: Numeric
+{% endhighlight %}
+</p>
+<p>Sometimes types don't make sense for attributes, and it's true. In fact they don't affect anything at all for now. But they're reserved for future use cases,
+    like "socketable" attributes and using an ability for user to define attributes in user functions.
+    Good rule of thumb is to use closest meaningful type or just resort to <code>Any</code>.
+</p>
+<p>As you might expected attributes can be configured with a title and a default value:</p>
+<p>
+{% highlight yaml %}
+components:
+    NumberLiteral:
+        attrs:
+            V:
+                type: Numeric
+                title: Value
+                default: 1
+        out:
+          O: Numeric
+{% endhighlight %}
+</p>
+<p>By default, for modifying an attribute's value, the editor uses just uses a simple <code>&lt;input&gt;</code> element. But you can define your own value pickers. E.g. there's a built-in value picker called
+    <code>dictionary</code>, which requires a defined dictionary in your schema:</p>
+<p>
+{% highlight yaml %}
+components:
+    TrigonometricFn:
+        title: Trigonometic function
+        in:
+            I: Numeric
+        attrs:
+            Fn:
+                type: Any
+                title: Function
+                default: sin
+                valuePicker:
+                    type: dictionary
+                    dictionary: TrigonometricFunctions
+        out:
+          O: Numeric
+
+dictionaries:
+    TrigonometricFunctions: # Referenceable unique name of a dictionary
+        title: Trigonometic functions of a single argument
+        values: # Name -> Title
+            sin: sin(X)
+            cos: cos(X)
+            tg:  tan(X)
+            ctg: cot(X)
+{% endhighlight %}
+<img src="{{ '/assets/images/dict_example.png' | relative_url }}" class="img-thumbnail"/>
+</p>
+<p>In order to register your own value picker you have to resort to <code>registerValuePicker(type, valuePicker)</code> function on a <code>VAX</code> object, e.g.:</p>
+<p>
+{% highlight javascript %}
+// we have to provide an object with two functions: 'getValueTitle' and 'invoke'
+var promptValuePicker = {
+    getValueTitle: function(value, options) // used to map your plain value to a title, options are passed from your schema
+    {
+        return value.toString();
+    },
+
+    invoke: function(value, callback, options) // 'value' holds a current state of an attribute, 'options' are passed from schema
+    {
+        val newValue = prompt(options.promptMessage, value);
+        callback(newValue); // don't forget to trigger callback with a new value from your picker
+    }
+}
+
+var myVAX = new VAX('containerId', {schema: /*...*/}); // create your VAX object
+myVAX.registerValuePicker('prompt', promptValuePicker); // 'prompt' will be our picker name
+{% endhighlight %}
+</p>
+<p>With this value picker defined, we can use it in our schema:</p>
+<p>
+{% highlight yaml %}
+components:
+    PromptNumber:
+        attrs:
+            V:
+                type: Numeric
+                title: Value
+                default: 1
+                valuePicker: # this is what passed as 'options'
+                    type: prompt # picker name
+                    promptMessage: "Provide a number, please ... "
+        out:
+          O: Numeric
+{% endhighlight %}
+</p>
+<p>Attributes sometimes might be substituted with input sockets. Also future versions of editor will provide with input sockets that can be set with default values just like attributes.</p>
+
 
 

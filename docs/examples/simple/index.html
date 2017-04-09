@@ -16,6 +16,8 @@ example: simple
 
         window.myVAX = new VAX('vax-calc', {schema: exampleSchema});
 
+        myVAX.loadGraph({"nodes":[{"id":2,"c":"Literal","x":687,"y":245,"a":{"V":"2"}},{"id":5,"c":"Literal","x":688,"y":349,"a":{"V":"2"}},{"id":8,"c":"Plus","x":840,"y":304}],"wires":[[2,"O",8,"A"],[5,"O",8,"B"]],"comments":[]});
+
         // eval
         $('#eval').click(function()
         {

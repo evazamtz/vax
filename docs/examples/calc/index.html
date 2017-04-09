@@ -16,17 +16,11 @@ example: calc
 
         window.myVAX = new VAX('vax-calc', {schema: exampleSchema});
 
-        var loadedGraph = localStorage.getItem('calcGraph');
-        if (loadedGraph)
-        {
-            myVAX.loadGraph(JSON.parse(loadedGraph));
-        }
+        myVAX.loadGraph({"nodes":[{"id":2,"c":"If","x":929,"y":212,"t":{"T":"Numeric"}},{"id":7,"c":"Gt","x":728,"y":152},{"id":11,"c":"Number","x":528,"y":226,"a":{"V":"2"}},{"id":14,"c":"Number","x":528,"y":323,"a":{"V":"5"}},{"id":17,"c":"Result","x":1123,"y":284}],"wires":[[7,"O",2,"Condition"],[11,"O",7,"A"],[14,"O",7,"B"],[11,"O",2,"onTrue"],[14,"O",2,"onFalse"],[2,"O",17,"I"]],"comments":[]});
 
         // eval
         $('#eval').click(function()
         {
-            localStorage.setItem('calcGraph', myVAX.serializeGraph());
-
             alert(walkCalculator(myVAX));
         });
     });

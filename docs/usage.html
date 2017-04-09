@@ -1,0 +1,122 @@
+---
+layout: default
+---
+
+<h1>Usage</h1>
+<h3>Dependencies</h3>
+<ul>
+    <li>
+        <a href="http://dmitrybaranovskiy.github.io/raphael/">Raphael.js</a>
+        <p>The SVG drawing library</p>
+    </li>
+    <li>
+        <a href="https://github.com/jashkenas/underscore">underscore.js</a>
+        <p>Utility library for working with objects and collections</p>
+    </li>
+    <li>
+        <a href="http://jquery.com/">jQuery</a>
+        <p>DOM manipulations, events</p>
+    </li>
+    <li>
+        <a href="https://github.com/jbreckmckye/raphael-paragraph">raphael-paragraph</a>
+        <p>Add paragraphs of wrapped text in Raphael.js </p>
+    </li>
+    <li>
+        <a href="https://harvesthq.github.io/chosen/">chosen</a>
+        <p>Chosen is a jQuery plugin that makes long, unwieldy select boxes much more user-friendly.</p>
+    </li>
+</ul>
+<p>You can find all them under <code>/src/vendor</code> directory.</p>
+
+<h3>VAX files</h3>
+<ul>
+    <li><code>/src/vax.js</code></li>
+    <li><code>/src/styles.css</code></li>
+    <li><code>/src/vax-grid.gif</code></li>
+</ul>
+
+<h3>Creating VAX object</h3>
+<p>First you have to define a container element on your page:</p>
+<p>
+{% highlight html %}
+<div id="vax" style="width: 400px; height: 300px"></div>
+{% endhighlight %}
+</p>
+<p>Then you create a <code>VAX</code> object:</p>
+<p>
+{% highlight javascript %}
+var myVAX = new VAX('vax', {
+      schema: /*...*/    // your schema
+
+    , userFunctionsSaveHandler: function(id, config, callback) {
+        $.post('/vax/saveUserFunction', {schema: 'sql', id: id, config: JSON.stringify(config)}, function() { callback(); });
+    }
+
+    , userFunctionsLoadHandler: function(callback) {
+        $.getJSON('/vax/loadUserFunctions', {schema: 'sql'}, function(data) { callback(data.userFunctions); });
+    }
+});
+{% endhighlight %}
+</p>
+<p>In config you provide schema and handlers for saving/loading user functions if needed. By default they are stored in <code>localStorage</code>.
+    See <a href="{{ '/schema.html' | relative_rul }}">schema</a> definition documentation.</p>
+
+<h3>Load/save blueprints</h3>
+<p>You can save your current blueprint graph with <code>saveGraph()</code> or <code>serializeGraph()</code> functions:</p>
+<p>
+{% highlight javascript %}
+myVAX.saveGraph();
+myVAX.serializeGraph();
+{% endhighlight %}
+</p>
+<p>In order to load a blueprint:</p>
+<p>
+{% highlight javascript %}
+myVAX.loadGraph({nodes:[{c: "Select", id: 1, x: 900, y: 200}]});
+{% endhighlight %}
+</p>
+
+<h3>Compose trees</h3>
+<p>To convert your blueprint to a tree use <code>composeTreesInlined()</code> or <code>composeTrees()</code>function:</p>
+<p>
+{% highlight javascript %}
+myVAX.composeTreesInlined(); // returns an array of trees with user functions being inlined
+myVAX.composeTrees();        // returns an array of trees with user functions untouched
+{% endhighlight %}
+</p>
+
+<h3>Tree structure</h3>
+<p>
+{% highlight javascript %}
+[{
+    id: 8, // node id
+    c: "Plus", // component name
+    t: { // type params
+        "T": "Numeric"
+    },
+    links: { // wired inputs
+      A: { // input name
+        id: 2,
+        c: "Literal",
+        a: { // attributes
+          "V": "2"
+        },
+        links: {},
+        out: "O" // output name
+      },
+      B: {
+        id: 5,
+        c: "Literal",
+        a: {
+          "V": "2"
+        },
+        links: {},
+        out: "O" // output name
+      }
+    }
+}]
+{% endhighlight %}
+</p>
+
+
+
