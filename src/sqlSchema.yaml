@@ -1,0 +1,894 @@
+colors:
+  relation: "#cf3"
+  table: "#0ff"
+  exprs: "#aaa"
+  expr: "#fff"
+  boolean:  "#f22"
+  orderBy: "#6fa"
+  coreNode:    "0-#f80-#da0:50-#520"
+  auxCoreNode: "0-#aaf-#9be:50-#225"
+  tableNode:   "0-#0ff-#0dd:20-#111"
+  columnNode:  "0-#0f7-#0d3:30-#111"
+  logicNode:   "0-#f55-#d20:30-#411"
+  dictNode:    "0-#aa5-#7aa:30-#011"
+  exprNode:    "0-#aff-#599:30-#111"
+types:
+  # [Any] type is considered as super type
+  FromClause:
+    color: @relation
+    title: FROM
+  Relation:
+    color: @relation
+    extends: FromClause
+    title: Отношение
+  Exprs:
+    color: @exprs
+    title: Выражения
+  Expr:
+    color: @expr
+    extends: Exprs
+    title: Выражение
+  NullExpr:
+    color: @expr
+    extends: Expr
+    title: NULL
+  BooleanExpr:
+    color: @boolean
+    extends: Expr
+    title: Условие
+  NumericExpr:
+    color: @expr
+    extends: Expr
+    title: Число
+  IdExpr:
+    color: @expr
+    extends: NumericExpr
+    title: ID
+  TextExpr:
+    color: @expr
+    extends: Expr
+    title: Строка
+  TimestampExpr:
+    color: @expr
+    extends: [Expr]
+    title: Время
+  DateExpr:
+    color: @expr
+    extends: TimestampExpr
+    title: Дата
+  IntervalExpr:
+    color: @expr
+    extends: [Expr]
+    title: Дата
+  OrderByColumns:
+    color: @orderBy
+    title: Колонки сортировки
+  Table:
+    extends: Relation
+    color: @table
+    title: Таблица
+  Select:
+    extends: Relation
+    color: @relation
+    title: Запрос
+  CTE:
+    extends: Relation
+    color: @relation
+    title: CTE
+  Identifier:
+    color: "#0ff"
+    title: Идентификатор
+
+dictionaries:
+  JoinTypes:
+    title: Типы соединений таблиц
+    values:
+      INNER: INNER
+      LEFT: LEFT
+      RIGHT: RIGHT
+      FULL: FULL
+
+  AggregateTypes:
+    title: Типы аггрегатных функций
+    values:
+      MAX: МАКСИМУМ
+      MIN: МИНИМУМ
+      AVG: СРЕДНЕЕ
+      COUNT: КОЛИЧЕТВО
+      COUNT(DISTINCT: КОЛИЧЕСТВО УНИКАЛЬНЫХ
+      SUM: СУММА
+
+  SortDirections:
+    title: Направления сортировок
+    values:
+      ASC: По возрастанию
+      DESC: По убыванию
+
+  OrderDeliveryStatuses:
+    title: Статусы доставки заказ
+    values:
+      delivered: Доставлен
+      intransit: В пути
+
+  YesNo:
+    title: Да/Нет
+    values:
+       yes: Да
+       no: Нет
+
+  PlusMinus:
+    title: +/-
+    values:
+       plus: +
+       minus: -
+
+  Months:
+    title: Месяцы
+    values:
+       1: Январь
+       2: Февраль
+       3: Март
+       4: Апрель
+       5: Май
+       6: Июнь
+       7: Июль
+       8: Август
+       9: Сентябрь
+       10: Октябрь
+       11: Ноябрь
+       12: Декабрь
+
+  IntervalTypes:
+     title: Типы интервалов
+     values:
+      D: День
+      M: Месяц
+
+  AccountingFunctionTypes:
+    title: Типы бухгалтерский функций
+    values:
+      DebitBalance: Дт Сальдо
+      CreditBalance: Кт Сальдо
+      DebitSum: Дт Оборот
+      CreditSum: Кт Оборот
+
+  OrderDetailsConsts:
+    title: Переменные tbl_order.details
+    values:
+      f103_date: Дата Ф103
+      f103_num: Номер Ф103
+      moneyRecipient: Получатель денег
+
+groups:
+  core: Основные элементы
+  agg: Аггрегаты
+  bool: Логические элементы
+  cmp: Сравнения
+  datetime: Работа с датой
+  expr: Выражения
+  literal: Литералы
+  cast: Преобразования данных
+  tables: Таблицы
+  advancedCore: Продвинутые элементы
+  dictionaries: Справочники
+
+components:
+  Select:
+    group: core
+    title: Запрос (SELECT)
+    color: @coreNode
+    in:
+      WITH: CTE
+      Cols:
+        title: Колонки
+        type: Exprs
+      FROM:
+        title: Данные
+        type: FromClause
+      WHERE:
+         title: Фильтр строк
+         type: BooleanExpr
+      ORDER:
+         title: Сортировка
+         type: OrderByColumns
+      GROUP:
+         title: Группировка
+         type: Exprs
+      HAVING:
+        title: Фильтр групп
+        type: BooleanExpr
+    attrs:
+      Alias: Any
+      LIMIT: Any
+      OFFSET: Any
+    out:
+      O: Select
+
+  Subquery:
+    group: core
+    color: @coreNode
+    title: Подзапрос
+    typeParams: [T]
+    typeBounds: {T: {<: Expr}}
+    in:
+      S: Select
+    attrs:
+      Alias: Identifier
+    out:
+      O: @T
+
+  CTE:
+    group: core
+    color: @coreNode
+    title: CTE
+    in:
+      Prev: CTE
+      S: Select
+    attrs:
+      Alias: Identifier
+    out:
+      O: CTE
+
+  PseudoTable:
+    group: core
+    color: @coreNode
+    title: Псевдо таблица
+    typeParams: [T]
+    typeBounds: {T: {<: Expr}}
+    in:
+      Prev: CTE
+      V1:  @T
+      V2:  @T
+      V3:  @T
+      V4:  @T
+      V5:  @T
+      V6:  @T
+      V7:  @T
+      V8:  @T
+      V9:  @T
+      V10: @T
+    attrs:
+      FieldAlias:
+        type: Identifier
+        default: v
+      CTEAlias:
+        type: Identifier
+        default: vals
+    out:
+      CTE: CTE
+      Expr: @T
+
+  SmartJoin:
+    group: core
+    color: @coreNode
+    title: Авто JOIN
+    in:
+      Prev: FromClause
+      L: Table
+      R: Table
+    attrs:
+      Type:
+        default: INNER
+        valuePicker:
+          type: dictionary
+          dictionary: JoinTypes
+    out:
+      O: FromClause
+
+  PlainJoin:
+    group: advancedCore
+    color: @coreNode
+    title: JOIN
+    in:
+      Prev: FromClause
+      L: Relation
+      R: Relation
+      ON: BooleanExpr
+    attrs:
+      Type:
+        default: INNER
+        valuePicker:
+          type: dictionary
+          dictionary: JoinTypes
+    out:
+      O: FromClause
+
+  PickColumn:
+    group: core
+    title: Выбрать колонку
+    color: @auxCoreNode
+    in:
+      R:
+        title: Relation
+        type: Relation
+    attrs:
+      C:
+        title: Name
+        type: Identifier
+        default: "id"
+      A:
+        title: Alias
+        type: Identifier
+    out:
+      O:
+        type: Expr
+
+  AllColumns:
+    group: core
+    color: @auxCoreNode
+    title: Все колонки (*)
+    in:
+      R:
+        title: Relation
+        type: Relation
+    out:
+      O:
+        type: Exprs
+
+  Gather3Columns:
+      group: core
+      color: @auxCoreNode
+      title: 3 колонки
+      in:
+        C1: Exprs
+        C2: Exprs
+        C3: Exprs
+      out:
+        O:
+          type: Exprs
+
+  Gather5Columns:
+    group: core
+    color: @auxCoreNode
+    title: 5 колонок
+    in:
+      C1: Exprs
+      C2: Exprs
+      C3: Exprs
+      C4: Exprs
+      C5: Exprs
+    out:
+      O:
+        type: Exprs
+
+  Gather10Columns:
+      group: core
+      color: @auxCoreNode
+      title: 10 колонок
+      in:
+        C1: Exprs
+        C2: Exprs
+        C3: Exprs
+        C4: Exprs
+        C5: Exprs
+        C6: Exprs
+        C7: Exprs
+        C8: Exprs
+        C9: Exprs
+        C10: Exprs
+      out:
+        O:
+          type: Exprs
+
+
+
+  OrderBy:
+    group: core
+    color: @auxCoreNode
+    title: Сортировка
+    in:
+      Prev:
+        title: Предыдущие
+        type: OrderByColumns
+      E:
+        title: Выражение
+        type: Expr
+    attrs:
+      D:
+        title: Порядок
+        default: "ASC"
+        valuePicker:
+          type: dictionary
+          dictionary: SortDirections
+    out:
+      O:
+        type: OrderByColumns
+
+  GroupBy:
+    group: core
+    color: @auxCoreNode
+    title: Группировка
+    in:
+      Prev:
+        title: Предыдущие
+        type: Exprs
+      A: Expr
+      B: Expr
+      C: Expr
+    out:
+      O:
+        type: Exprs
+
+  Aggregate:
+    group: agg
+    color: @auxCoreNode
+    title: Аггрегат
+    in:
+      Expr: Expr
+      FILTER: BooleanExpr
+    attrs:
+      Type:
+        valuePicker:
+          type: dictionary
+          dictionary: AggregateTypes
+        default: COUNT
+      Alias:
+        type: Identifier
+        default: cnt
+    out:
+      O: Expr
+
+  BooleanAnd:
+    group: bool
+    color: @logicNode
+    title: И (AND)
+    in:
+      A:
+        title: A
+        type: BooleanExpr
+      B:
+        title: A
+        type: BooleanExpr
+    out:
+      O:
+        title: AND
+        type: BooleanExpr
+
+  BooleanOr:
+    group: bool
+    color: @logicNode
+    title: ИЛИ (OR)
+    in:
+      A:
+        title: A
+        type: BooleanExpr
+      B:
+        title: A
+        type: BooleanExpr
+    out:
+      O:
+        title: O
+        type: BooleanExpr
+
+  BooleanNot:
+    group: bool
+    color: @logicNode
+    title: НЕ (NOT)
+    in:
+      I: BooleanExpr
+    out:
+      O: BooleanExpr
+
+  BinOp_Plus:
+   group: expr
+   color: @exprNode
+   title: Плюс (+)
+   typeParams: [T]
+   typeBounds: {T: {<: Expr}}
+   in:
+      A: @T
+      B: @T
+   out:
+      O: @T
+
+  BinOp_Minus:
+   group: expr
+   color: @exprNode
+   title: Минус (-)
+   typeParams: [T]
+   typeBounds: {T: {<: Expr}}
+   in:
+      A: @T
+      B: @T
+   out:
+      O: @T
+
+  BinOp_Mul:
+   group: expr
+   color: @exprNode
+   title: Умножить (*)
+   typeParams: [T]
+   typeBounds: {T: {<: Expr}}
+   in:
+      A: @T
+      B: @T
+   out:
+      O: @T
+
+  BinOp_Div:
+   group: expr
+   color: @exprNode
+   title: Поделить (/)
+   typeParams: [T]
+   typeBounds: {T: {<: Expr}}
+   in:
+      A: @T
+      B: @T
+   out:
+      O: @T
+
+  BinOp_Eq:
+    group: cmp
+    color: @exprNode
+    title: Равняется (=)
+    in:
+      A:
+        title: A
+        type: Expr
+      B:
+        title: B
+        type: Expr
+    out:
+      O:
+        title: O
+        type: BooleanExpr
+
+  BinOp_NotEq:
+    group: cmp
+    color: @exprNode
+    title: НЕ равняется (!=)
+    in:
+      A:
+        title: A
+        type: Expr
+      B:
+        title: B
+        type: Expr
+    out:
+      O:
+        title: O
+        type: BooleanExpr
+
+  In:
+    group: cmp
+    color: @logicNode
+    title: Одно из (IN)
+    in:
+      E: Expr
+      I1: Expr
+      I2: Expr
+      I3: Expr
+      I4: Expr
+      I5: Expr
+    out:
+      O: BooleanExpr
+
+  NotIn:
+    group: cmp
+    color: @logicNode
+    title: Не одно из (NOT IN)
+    in:
+      E: Expr
+      I1: Expr
+      I2: Expr
+      I3: Expr
+      I4: Expr
+      I5: Expr
+    out:
+      O: BooleanExpr
+
+  BinOp_Lt:
+    group: cmp
+    color: @exprNode
+    title: Меньше (<)
+    in:
+      A: Expr
+      B: Expr
+    out:
+      O: BooleanExpr
+
+  BinOp_LtEq:
+    group: cmp
+    color: @exprNode
+    title: Меньше или равно (<=)
+    in:
+      A: Expr
+      B: Expr
+    out:
+      O: BooleanExpr
+
+  BinOp_Gt:
+    group: cmp
+    color: @exprNode
+    title: Больше (>)
+    in:
+      A: Expr
+      B: Expr
+    out:
+      O: BooleanExpr
+
+  BinOp_GtEq:
+    group: cmp
+    color: @exprNode
+    title: Больше либо равно (>=)
+    in:
+      A: Expr
+      B: Expr
+    out:
+      O: BooleanExpr
+
+  Between:
+     group: cmp
+     color: @exprNode
+     title: От и до (BETWEEN)
+     in:
+       E: Expr
+       L: Expr
+       R: Expr
+     out:
+       O: BooleanExpr
+
+  IsNull:
+    group: cmp
+    color: @exprNode
+    title: Пустое? (IS NULL)
+    in:
+      I: Expr
+    out:
+      O: BooleanExpr
+
+  IsNotNull:
+    group: cmp
+    color: @exprNode
+    title: Не пустое? (IS NOT NULL)
+    in:
+      I: Expr
+    out:
+      O: BooleanExpr
+
+  TextLiteral:
+    group: literal
+    title: Строка
+    attrs:
+      V: TextExpr
+    out:
+      O: TextExpr
+
+  NumericLiteral:
+    group: literal
+    title: Число
+    attrs:
+      V:
+        type: NumericExpr
+        title: =
+        default: "0"
+    out:
+      O: NumericExpr
+
+  NullLiteral:
+    group: literal
+    title: NULL
+    out:
+      O: NullExpr
+
+  CurrentDate:
+    group: datetime
+    title: Текущая дата
+    out:
+      O: DateExpr
+
+  DateLiteral:
+    group: datetime
+    title: Выбрать дату
+    attrs:
+      Year:
+        type: IdExpr
+        title: Год
+        default: 2017
+      Month:
+        type: IdExpr
+        title: Месяц
+        default: 1
+        valuePicker:
+          type: dictionary
+          dictionary: Months
+      Day:
+        type: IdExpr
+        title: День
+        default: 1
+    out:
+     O: DateExpr
+
+  IntervalLiteral:
+    group: datetime
+    title: Интервал дат
+    attrs:
+      N:
+        type: Any
+        default: 1
+      Type:
+        type: Any
+        default: day
+        valuePicker:
+          type: dictionary
+          dictionary: IntervalTypes
+    out:
+      O: IntervalExpr
+
+  DatePlusMinusInteval:
+    group: datetime
+    title: Дата +/- интервал
+    in:
+      Date: DateExpr
+      Interval: NumericExpr
+    attrs:
+      Operation:
+        type: TextExpr
+        title: "+/-"
+        default: "+"
+        valuePicker:
+          type: dictionary
+          dictionary: PlusMinus
+    out:
+      O: DateExpr
+
+  DateRange:
+    group: datetime
+    title: Создать даты в периоде
+    in:
+      Prev: CTE
+      From: DateExpr
+      To: DateExpr
+      Interval: IntervalExpr
+    attrs:
+      FieldAlias:
+        type: Identifier
+        default: d
+      CTEAlias:
+        type: Identifier
+        default: date_ranges
+    out:
+      CTE: CTE
+      Expr: DateExpr
+
+  FirstDayOfMonth:
+    group: datetime
+    title: Первый день месяца
+    in:
+      D: DateExpr
+    out:
+      O: DateExpr
+
+  LastDayOfMonth:
+    group: datetime
+    title: Последний день месяца
+    in:
+      D: DateExpr
+    out:
+      O: DateExpr
+
+  AliasExpr:
+    group: core
+    title: Синоним выражения
+    typeParams: [T]
+    typeBounds: {T: {<: Expr}}
+    in:
+      E: @T
+    attrs:
+      Alias:
+        type: Identifier
+        default: alias
+    out:
+       O: @T
+
+  CustomSql:
+    group: core
+    color: @coreNode
+    title: Custom SQL
+    typeParams: [T]
+    attrs:
+      SQL: @T
+      Quote:
+        title: В кавычки?
+        type: Any
+        default: no
+        valuePicker:
+          type: dictionary
+          dictionary: YesNo
+    out:
+      O: @T
+
+  CastExprOnBlueprint:
+    group: core
+    title: "~>"
+    typeParams: [T]
+    typeBounds: {T: {<: Expr}}
+    in:
+      I: Expr
+    out:
+      O: @T
+
+  CastToDate:
+    group: cast
+    title: Преобразовать в дату
+    in:
+      E: Expr
+    out:
+      O: DateExpr
+
+  CastToText:
+    group: cast
+    title: Преобразовать в текст
+    in:
+      E: Expr
+    out:
+      O: TextExpr
+
+  CastToNumeric:
+    group: cast
+    title: Преобразовать в число
+    in:
+      E: Expr
+    out:
+      O: NumericExpr
+
+
+  Repeat:
+    group: core
+    title: ->>-
+    typeParams: [T]
+    in:
+        I: @T
+    out:
+        O: @T
+
+  AccountingFn:
+    group: core
+    title: ОСВ
+    in:
+      Account:
+        title: Счёт
+        type: TextExpr
+      CustomerID:
+        title: ID Клиента
+        type: IdExpr
+      Platform:
+        title: Площадка
+        type: TextExpr
+      From:
+        title: Период от (вкл.)
+        type: DateExpr
+      To:
+        title: Период до (вкл.)
+        type: DateExpr
+    attrs:
+      Type:
+        title: Тип
+        type: TextExpr
+        default: DebitBalance
+        valuePicker:
+          type: dictionary
+          dictionary: AccountingFunctionTypes
+      Alias:
+        type: Identifier
+    out:
+      O: NumericExpr
+
+  OrderDetails:
+    group: Tbl_public__tbl_order
+    title: Детали заказа
+    in:
+      T: Order
+    attrs:
+      Field:
+        title: Поле
+        type: TextExpr
+        default: f103_date
+        valuePicker:
+          type: dictionary
+          dictionary: OrderDetailsConsts
+      Alias:
+        type: Identifier
+        default: f103_date
+    out:
+      O: TextExpr

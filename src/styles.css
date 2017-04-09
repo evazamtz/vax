@@ -14,11 +14,19 @@
 
     .vax-canvas {
         position: absolute;
-        background: url("vax-grid.jpg") #222 repeat;
+        background: url("vax-grid.png") #222 repeat;
         left: 41px;
         top: 41px;
         bottom: 20px;
         right: 20px;
+    }
+
+    .vax-minimap {
+        position: absolute;
+        background: #222;
+        bottom: 0;
+        right: 0;
+        border: 1px solid #999;
     }
 
     .vax-toolbar {

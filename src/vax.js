@@ -205,16 +205,14 @@
                    "in": {
                        "O1": "UF_Outputs",
                        "O2": "UF_Outputs",
-                       "O3": "UF_Outputs",
+                       "O3": "UF_Outputs"
                    },
                    "out": {
                        "Outputs": "UF_Outputs"
                    }
                }
            };
-        },
-
-
+        }
     }); // vax.extend
 
     // VAX class
@@ -234,8 +232,39 @@
         var toolbarSize = this.toolbarSize = 40;
 
         // toolbar
-        var $toolbar = this.$toolbar = $('<div class="vax-toolbar"><div class="vax-toolbar-btn" data-action="createFunction">F</div><div class="vax-toolbar-btn" data-action="help">?</div></div>');
+        // TODO: вынести в компонент
+        var $toolbar = this.$toolbar = $('<div class="vax-toolbar"/>');
+        var buttons = {addNode: '+', comment: 'C', createFunction: 'f', 'compileFunction': 'E'};
+        var titles =  {addNode: 'Добавить элемент', comment: 'Создать комментарий', createFunction: 'Создать пользовательскую функцию', compileFunction: 'Сохранить пользовательскую функцию'};
+        _.each(buttons, function(text, action)
+        {
+            $toolbar.append($('<div class="vax-toolbar-btn"/>').text(text).attr('data-action', action).attr('title', titles[action]));
+        });
         $wrapper.append($toolbar);
+        $toolbar.on('click', '.vax-toolbar-btn', function()
+        {
+            var $btn   = $(this);
+            var action = $btn.attr('data-action');
+
+            switch (action)
+            {
+                case 'addNode':
+                    vaxRoot.showComponentSelector();
+                    break;
+
+                case 'comment':
+                    vaxRoot.showCommentCreator();
+                    break;
+
+                case 'createFunction':
+                    vaxRoot.showNewUserFunctionDialog();
+                    break;
+
+                case 'compileFunction':
+                    vaxRoot.tabs.compileUserFunction();
+                    break;
+            }
+        });
 
         // tabs wrapper
         var $tabsWrapper = this.$tabsWrapper = $('<div class="vax-tabs-wrapper"/>');
@@ -291,14 +320,15 @@
         // creating the actual Raphael object
         var raphael = this.raphael = new Raphael(this.canvasDomElementId, this.canvasWidth, this.canvasHeight);
 
+
+        // create minimap
+        this.miniMap = new VaxMiniMap(this);
+
         // create ui
         this.ui = new VaxUI(this);
 
         // create tabs
         this.tabs = new VaxTabs(this);
-
-        // create user function storage
-        this.userFunctionStorage = new VaxUserFunctionStorage(this);
 
         // create valuePickers
         this.valuePickers = {
@@ -317,6 +347,7 @@
         this.isWiring    = false;
         this.isSelecting = false;
         this.isPanning   = false;
+        this.isMinimapDragging = false;
 
         // system keys positions
         this.isSpacebarDown = false;
@@ -347,6 +378,10 @@
             }
         });
 
+        // create user function storage
+        this.userFunctionStorage = new VaxUserFunctionStorage(this);
+
+        // define empty schema
         this.schema = {};
 
         this.isValidType = function isValidType(type)
@@ -450,7 +485,8 @@
                 Any: {
                     color: "#fff",
                     extends: [],
-                    typeParams: []
+                    typeParams: [],
+                    title: 'Любой'
                 }
             };
 
@@ -499,6 +535,7 @@
                     color: self.resolveColor(type.color),
                     extends: _.filter(_.unique(allExtends, false)),
                     typeParams: type.typeParams || [],
+                    title: type.title || name
                 };
             });
 
@@ -546,6 +583,7 @@
                 title: name,
                 color: "0-#490-#070:20-#333",
                 typeParams: [],
+                typeBounds: {},
                 inputSockets: [],
                 attributes: [],
                 outputSockets: [],
@@ -603,6 +641,21 @@
             return !(this.tabs.isCurrentlyBlueprint() && type.substring(0, 3) == 'UF_');
         };
 
+        this.doesTypeRespectBounds = function(type, typeBounds)
+        {
+            if (!typeBounds)
+            {
+                return true;
+            }
+
+            if (typeBounds['<'])
+            {
+                return this.areParsedTypesCompatible(typeBounds['<'], type);
+            }
+
+            return true;
+        };
+
         this.cloneComponentConfig = function(component)
         {
             var componentConfig = this.schema.components[component];
@@ -615,7 +668,7 @@
             // shallow clone
             var nodeConfig = _.clone(componentConfig);
 
-            // deep clone
+            // deep clone of nested objects
             nodeConfig.inputSockets  = [];
             _.each(componentConfig.inputSockets, function(socket)
             {
@@ -632,6 +685,12 @@
             _.each(componentConfig.attributes, function(attr)
             {
                 nodeConfig.attributes.push(_.clone(attr));
+            });
+
+            nodeConfig.typeInstances = {};
+            _.each(componentConfig.typeInstances, function(type, alias)
+            {
+                nodeConfig.typeInstances[alias] = type;
             });
 
             return nodeConfig;
@@ -655,7 +714,7 @@
             _.each(nodeConfig.attributes,    subUpdate);
         };
 
-        this.getColorOfParsedType = function(parsedType)
+        this.findConfigOfParsedType = function(parsedType)
         {
             var rootTypeName = _.isObject(parsedType) ? parsedType.name : parsedType;
 
@@ -671,7 +730,17 @@
                 throw new Error("Type " + rootTypeName + " wasn't found!");
             }
 
-            return type.color;
+            return type;
+        };
+
+        this.getColorOfParsedType = function(parsedType)
+        {
+            return this.findConfigOfParsedType(parsedType).color;
+        };
+
+        this.getTitleOfParsedType = function(parsedType)
+        {
+            return this.findConfigOfParsedType(parsedType).title;
         };
 
         this.compileUserFunction = function(config)
@@ -706,25 +775,33 @@
                 component.title = root.a.Title;
                 component.color = root.a.Color;
 
+                var walkedIds = [];
                 component.in    = {};
                 component.out   = {};
 
                 var walk = function walk(node)
                 {
-                    if (node.c == 'UF_Input')
+                    if (!_.find(walkedIds, function(id) { return id ===   node.id; }))
                     {
-                        component.in[node.a.Name] = {
-                            type:    node.t.T,
-                            title:   node.a.Title
-                        };
+                        if (node.c == 'UF_Input')
+                        {
+                            component.in[node.a.Name] = {
+                                type:    node.t.T,
+                                title:   node.a.Title
+                            };
+                        }
+                        else if (node.c == 'UF_Output')
+                        {
+                            component.out[node.a.Name] = {
+                                type:    node.t.T,
+                                title:   node.a.Title
+                            };
+                        }
                     }
-                    else if (node.c == 'UF_Output')
-                    {
-                        component.out[node.a.Name] = {
-                            type:    node.t.T,
-                            title:   node.a.Title
-                        };
-                    }
+
+                    // remember walked node
+                    walkedIds.push(node.id);
+
                     /*
                     not yet supported
                     else if (node.c == 'UF_Attribute')
@@ -902,6 +979,9 @@
             this.initScrollbarsHandlers();
             this.refreshScrollSliders();
 
+            // invalidate minimap
+            this.miniMap.invalidate();
+
             // init ui
             this.ui.init();
 
@@ -914,7 +994,7 @@
             // selection handler
             self.$canvas.mousedown(function(e)
             {
-                if (self.isDragging || self.isPanning || self.isSelecting || self.isWiring)
+                if (self.isDragging || self.isPanning || self.isSelecting || self.isWiring || self.isMinimapDragging)
                 {
                     return;
                 }
@@ -1008,6 +1088,9 @@
             var $horizSlider = $('.vax-horiz-sb-slider', this.$wrapper);
             var $vertSlider  = $('.vax-vert-sb-slider',  this.$wrapper);
 
+            var $horizSb = $('.vax-horiz-scrollbar', this.$wrapper);
+            var $vertSb  = $('.vax-vert-scrollbar',  this.$wrapper);
+
             $horizSlider.mousedown(function(e)
             {
                 var mouseX = e.originalEvent.pageX;
@@ -1034,7 +1117,7 @@
                 {
                     var mouseX = e.pageX;
 
-                    var left = mouseX - self.scollbarsDragging.horizontal.delta;
+                    var left = mouseX - self.scollbarsDragging.horizontal.delta - $horizSb.offset().left - self.scrollbarSpinnerSize;
 
                     left = Math.max(0, left);
                     left = Math.min(left, self.canvasWidth - self.scrollbarSpinnerSize - $horizSlider.width());
@@ -1054,7 +1137,7 @@
                 {
                     var mouseY = e.pageY;
 
-                    var top = mouseY - self.scollbarsDragging.vertical.delta;
+                    var top = mouseY - self.scollbarsDragging.vertical.delta - $vertSb.offset().top - self.scrollbarSpinnerSize;
 
                     top = Math.max(0, top);
                     top = Math.min(top, self.canvasHeight - self.scrollbarSpinnerSize - $vertSlider.height());
@@ -1153,7 +1236,7 @@
             };
         };
 
-        this.refreshScrollSliders = function()
+        this.refreshScrollSliders = function(dontInvalidateMinimap)
         {
             var scales = this.getScrollbarsScales();
 
@@ -1168,11 +1251,17 @@
             var vertSpace = this.canvasHeight - 2 * this.scrollbarSpinnerSize;
             $('.vax-vert-sb-slider', this.$wrapper).css({
                 'height': vertSpace * scales.verticalScale,
-                'top': this.scrollbarSpinnerSize + vertSpace * scales.verticalOffset,
+                'top': this.scrollbarSpinnerSize + vertSpace * scales.verticalOffset
             });
+
+            // refresh minimap
+            if (!dontInvalidateMinimap)
+            {
+                this.miniMap.invalidate();
+            }
         };
 
-        this.panTo = function(left, top)
+        this.panTo = function(left, top, dontInvalidateMinimap)
         {
             var vb = this.getMaxViewBox();
 
@@ -1187,11 +1276,11 @@
             this.$canvas.css({'backgroundPosition': '' + (-left) + 'px ' + ' ' + (-top) + 'px'});
 
             // scrollSliders if they're driven by scrolling ?? should be a flag
-            this.refreshScrollSliders();
+            this.refreshScrollSliders(dontInvalidateMinimap);
         };
 
         // Показать диалог для выбора и создания нового компонента
-        this.showComponentSelector = function()
+        this.showComponentSelector = function(wiringSocket)
         {
             var self = this;
 
@@ -1208,8 +1297,77 @@
             // create select
             var $select = $('[data-role="component"]', $selectorBody).css({'width': '100%'});
 
+            // filter components
+            var filteredComponents = {};
+
+            if (wiringSocket)
+            {
+                // TODO: somehow handle parametrized types?
+
+                if (wiringSocket.isInput()) // we got it from input socket
+                {
+                    var inputParsedType = wiringSocket.config.parsedType;
+
+                    // select all componets, whose output sockets are compatible with origin input socket
+                    _.each(vaxRoot.schema.components, function(component, name)
+                    {
+                        var compatibleSocket = _.find(component.outputSockets, function(targetOutputSocket)
+                        {
+                            if (targetOutputSocket.parsedType.substr(0,1) === '@')
+                            {
+                                var typeAlias = targetOutputSocket.parsedType.substr(1);
+                                var typeBounds = component.typeBounds[typeAlias];
+
+                                return typeBounds ? vaxRoot.doesTypeRespectBounds(inputParsedType, typeBounds) : true;
+                            }
+                            else
+                            {
+                                return vaxRoot.areParsedTypesCompatible(inputParsedType, targetOutputSocket.parsedType);
+                            }
+                        });
+
+                        if (compatibleSocket)
+                        {
+                            filteredComponents[name] = component;
+                        }
+                    });
+                }
+                else // we got it from output socket
+                {
+                    var outputParsedType = wiringSocket.config.parsedType;
+
+                    // select all componets, whose input sockets are compatible with origin outputsocket
+                    _.each(vaxRoot.schema.components, function(component, name)
+                    {
+                        var compatibleSocket = _.find(component.inputSockets, function(targetInputSocket)
+                        {
+                            if (targetInputSocket.parsedType.substr(0,1) === '@')
+                            {
+                                var typeAlias  = targetInputSocket.parsedType.substr(1);
+                                var typeBounds = component.typeBounds[typeAlias];
+
+                                return typeBounds ? vaxRoot.doesTypeRespectBounds(outputParsedType, typeBounds) : true;
+                            }
+                            else
+                            {
+                                return vaxRoot.areParsedTypesCompatible(targetInputSocket.parsedType, outputParsedType);
+                            }
+                        });
+
+                        if (compatibleSocket)
+                        {
+                            filteredComponents[name] = component;
+                        }
+                    });
+                }
+            }
+            else
+            {
+                filteredComponents = self.schema.components;
+            }
+
             // fill it by groups
-            var grouped = _.groupBy(self.schema.components, function(component) { return component.group; });
+            var grouped = _.groupBy(filteredComponents, function(component) { return component.group; });
 
             _.each(grouped, function(components, group)
             {
@@ -1274,9 +1432,20 @@
                                     return;
                                 }
 
+                                if (!self.doesTypeRespectBounds(name, componentConfig.typeBounds[typeAlias]))
+                                {
+                                    return;
+                                }
+
                                 var title = name;
 
                                 var $option = $('<option/>').attr('value', name);
+
+                                // if we have wiring socket force a type select
+                                if (wiringSocket && wiringSocket.config.parsedType === name)
+                                {
+                                    $option.attr('selected', 'selected');
+                                }
 
                                 if (type.typeParams && type.typeParams.length)
                                 {
@@ -1299,6 +1468,8 @@
                     // append to selector body
                     $selectorBody.append($allTypes);
                     $('.vax-chosen', $allTypes).chosen({});
+
+
 
                     // force serialization of a selected type
                     $('select', $allTypes).change();
@@ -1410,6 +1581,38 @@
 
                 // push action into history
                 self.history.pushAction('createdANode');
+
+                // some wiring might be needed after node creation if have originSocket
+                if (wiringSocket)
+                {
+                    var compatibleSocket = null;
+
+                    // TODO: somehow handle parametrized types?
+
+                    if (wiringSocket.isInput()) // we got it from input socket
+                    {
+                        var inputParsedType = wiringSocket.config.parsedType;
+
+                        compatibleSocket = _.find(createdNode.outputSockets, function(targetOutputSocket)
+                        {
+                            return vaxRoot.areParsedTypesCompatible(inputParsedType, targetOutputSocket.config.parsedType);
+                        });
+                    }
+                    else // we got it from output socket
+                    {
+                        var outputParsedType = wiringSocket.config.parsedType;
+
+                        compatibleSocket = _.find(createdNode.inputSockets, function(targetInputSocket)
+                        {
+                            return vaxRoot.areParsedTypesCompatible(targetInputSocket.config.parsedType, outputParsedType);
+                        });
+                    }
+
+                    if (compatibleSocket)
+                    {
+                        vaxRoot.wire(wiringSocket.getId(), compatibleSocket.getId());
+                    }
+                } // if (originSocket)
             });
 
             self.selectorDlg.on('cancel', function()
@@ -1447,6 +1650,7 @@
                 }
 
                 self.createComment(commentConfig);
+                self.refreshScrollSliders();
             });
         };
 
@@ -1528,6 +1732,188 @@
                 delete self.userFunctionDlg;
             });
         };
+
+        function VaxMiniMap(vax)
+        {
+            var self = this;
+
+            if (!(vax instanceof VAX))
+            {
+                throw new Error("Instance of VAX was expected!");
+            }
+
+            this.rects = {};
+            this.paths = {};
+
+            this.initializedHandlers = false;
+
+            var vaxRoot = this.vaxRoot = vax;
+            var miniMapWidth = this.miniMapWidth = parseInt(this.vaxRoot.canvasWidth / 7);
+            var miniMapHeight = this.miniMapWidth = parseInt(this.vaxRoot.canvasHeight / 7);
+            var $container = this.$container = $('<div/>').attr('id', vaxRoot.canvasDomElementId + '-minimap').addClass('vax-minimap');
+            $container.css({width: miniMapWidth, height: miniMapHeight});
+            this.vaxRoot.$canvas.append($container);
+
+            var minimapRaphael = this.minimapRaphael = new Raphael($container.attr('id'), miniMapWidth, miniMapHeight);
+
+            this.invalidate = function()
+            {
+                // machinery for figuring which rects/path to delete
+                var allRects = _.keys(this.rects);
+                var allPaths = _.keys(this.paths);
+
+                var existingRects = [];
+                var existingPaths = [];
+
+                // calc scaling
+                var bb = vaxRoot.getMaxViewBox();
+
+                var bbWidth = bb.right - bb.left;
+                var bbHeight = bb.bottom - bb.top;
+
+                var scaleX = bbWidth  / miniMapWidth;
+                var scaleY = bbHeight / miniMapHeight;
+
+                // our working functon
+                var drawRectRelated = function(id, x, y, w, h, radius, attrs)
+                {
+                    existingRects.push(id);
+                    return self.drawRect(id, (x - bb.left) / scaleX, (y - bb.top) / scaleY, w / scaleX, h / scaleY, radius, attrs);
+                };
+
+                // draw comments
+                _.each(vaxRoot.comments, function(comment)
+                {
+                    drawRectRelated('COMMENT-' + comment.getId(), comment.getX(), comment.getY(), comment.getWidth(), comment.getHeight(), 3, {fill: '#ddd', opacity: .3}).toBack();
+                });
+
+                // draw wires
+                _.each(vaxRoot.wires, function(wire)
+                {
+                    var wireId = 'WIRE-' + wire.getId();
+
+                    var from = wire.getOutputSocket();
+                    var to   = wire.getInputSocket();
+
+                    var x1 = (from.getCX() - bb.left) / scaleX;
+                    var y1 = (from.getCY() - bb.top) / scaleY;
+
+                    var x2 = (to.getCX() - bb.left) / scaleX;
+                    var y2 = (to.getCY() - bb.top) / scaleY;
+
+                    var linePath = window.vax.buildWirePath(x1, y1, x2, y2);
+
+                    if (!self.paths.hasOwnProperty(wireId))
+                    {
+                        self.paths[wireId] = self.minimapRaphael.path(linePath);
+                        self.paths[wireId].attr({stroke: from.config.color});
+                    }
+                    else
+                    {
+                        self.paths[wireId].attr('path', linePath);
+                    }
+
+                    existingPaths.push(wireId);
+                });
+
+                // draw nodes
+                _.each(vaxRoot.nodes, function(node)
+                {
+                    drawRectRelated('NODE-' + node.getId(), node.getX(), node.getY(), node.getWidth(), node.getHeight(), 2, {fill: node.config.color}).toFront();
+                });
+
+                // draw viewport
+                var viewportRect = drawRectRelated('viewport',
+                    vaxRoot.viewBox.left, vaxRoot.viewBox.top, vaxRoot.canvasWidth, vaxRoot.canvasHeight, 0,
+                    {stroke: '#fff', cursor: 'move', fill: '#fff', 'fill-opacity': .1, 'stroke-dasharray': ['.']}
+                );
+                viewportRect.toFront();
+
+                // delete unused rects and paths
+                var unusedRects = _.difference(allRects, existingRects);
+                var unusedPaths = _.difference(allPaths, existingPaths);
+
+                _.each(unusedRects, function(id)
+                {
+                   self.rects[id].remove();
+                   delete self.rects[id];
+                });
+
+                _.each(unusedPaths, function(id)
+                {
+                   self.paths[id].remove();
+                   delete self.paths[id];
+                });
+
+                // initialize handlers
+                if (!this.initializedHandlers)
+                {
+                    // viewport dragging
+                    viewportRect.drag(
+                        function (dx, dy, nx, ny)
+                        {
+                            var dragInfo = self.dragInfo;
+
+                            var newX = Math.max(0, dragInfo.dragX + dx);
+                            newX = Math.min(newX, miniMapWidth - viewportRect.attr('width'));
+
+                            var newY = Math.max(0, dragInfo.dragY + dy);
+                            newY = Math.min(newY, miniMapHeight - viewportRect.attr('height'));
+
+                            viewportRect.attr({x: newX, y: newY});
+
+                            var px = newX * dragInfo.scaleX  + dragInfo.bb.left;
+                            var py = newY * dragInfo.scaleY + dragInfo.bb.top;
+
+                            vaxRoot.panTo(px, py, true);
+                        },
+
+                        function (x, y) {
+                            vaxRoot.isMinimapDragging = true;
+                            var dragInfo = self.dragInfo = {};
+
+                            dragInfo.dragX = viewportRect.attr('x');
+                            dragInfo.dragY = viewportRect.attr('y');
+
+                            var bb = dragInfo.bb = vaxRoot.getMaxViewBox();
+
+                            var bbWidth = bb.right - bb.left;
+                            var bbHeight = bb.bottom - bb.top;
+
+                            self.dragInfo.scaleX = bbWidth  / miniMapWidth;
+                            self.dragInfo.scaleY = bbHeight / miniMapHeight;
+                        },
+
+                        function (evt)
+                        {
+                            vaxRoot.isMinimapDragging = false;
+                            self.dragInfo = {};
+                            self.vaxRoot.refreshScrollSliders();
+                        }
+                    );
+
+                    this.initializedHandlers = true;
+                }
+            };
+
+            this.drawRect = function(id, x, y, width, height, radius, attrs)
+            {
+                var rect = null;
+                if (!this.rects.hasOwnProperty(id))
+                {
+                    rect = this.rects[id] = self.minimapRaphael.rect(x, y, width, height, radius);
+                    rect.attr(attrs);
+                }
+                else
+                {
+                    rect = this.rects[id];
+                }
+
+                rect.attr({x: x, y: y, width: width, height: height});
+
+                return rect;
+            }
+        }
 
         function VaxDraggingGroup(vax, rootRect)
         {
@@ -1938,6 +2324,7 @@
 
                 // push action into history
                 this.vaxRoot.history.pushAction('removedElements');
+                this.vaxRoot.refreshScrollSliders();
             };
 
             this.serializeSelectedGraph = function()
@@ -2027,8 +2414,7 @@
             };
         };
 
-        function VaxSocket(id, node, nodeIndex, config, kind)
-        {
+        function VaxSocket(id, node, nodeIndex, config, kind) {
             var self = this;
 
             if (!(node instanceof VaxNode)) {
@@ -2043,15 +2429,14 @@
             this.config = _.defaults(config, {
                 color: "#fff",
                 name: "",
-                title: "",
+                title: ""
             });
 
             this.kind = kind;
 
             this.wires = {};
 
-            this.createCircle = function()
-            {
+            this.createCircle = function () {
                 var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
                 var nodeX = self.node.getX();
@@ -2066,19 +2451,16 @@
                 return circle;
             };
 
-            this.createCaption = function()
-            {
+            this.createCaption = function () {
                 var cx = self.circle.attr("cx");
                 var cy = self.circle.attr("cy");
 
-                if (self.isInput())
-                {
-                    self.caption = raphael.text(cx + 10, cy, self.config.title + " (" + self.config.type + ')');
+                if (self.isInput()) {
+                    self.caption = raphael.text(cx + 10, cy, self.config.title + " (" + vaxRoot.getTitleOfParsedType(self.config.parsedType) + ')');
                     self.caption.attr('text-anchor', 'start');
                 }
-                else
-                {
-                    self.caption = raphael.text(cx - 10, cy, '(' + self.config.type + ')');
+                else {
+                    self.caption = raphael.text(cx - 10, cy, '(' + vaxRoot.getTitleOfParsedType(self.config.parsedType) + ')');
                     self.caption.attr('text-anchor', 'end');
                 }
 
@@ -2089,31 +2471,26 @@
                 });
             };
 
-            this.getBoundingBoxWidth = function()
-            {
+            this.getBoundingBoxWidth = function () {
                 return this.caption.getBBox().width + 10 + 10;
             };
 
-            this.alignToNodeWidth = function()
-            {
+            this.alignToNodeWidth = function () {
                 var nodeX = self.node.getX();
                 var nodeWidth = self.node.getWidth();
 
-                if (self.isOutput())
-                {
+                if (self.isOutput()) {
                     self.circle.attr('cx', nodeX + nodeWidth);
                     self.caption.attr('x', nodeX + nodeWidth - 10);
                 }
             };
 
-            this.attachToNodeDraggingGroup = function()
-            {
+            this.attachToNodeDraggingGroup = function () {
                 self.node.getDraggingGroup().addCircle(self.circle);
                 self.node.getDraggingGroup().addText(self.caption);
             };
 
-            this.init = function ()
-            {
+            this.init = function () {
                 // init shapes
                 self.circle = self.createCircle();
                 self.circle.toFront();
@@ -2121,7 +2498,7 @@
                     "stroke-width": 2,
                     stroke: self.config.color,
                     cursor: 'pointer',
-                    fill: '#000',
+                    fill: '#000'
                 });
                 self.circle.data("vaxType", "socket");
                 self.circle.data("socketKind", self.kind);
@@ -2134,10 +2511,8 @@
                 // init drag handlers
                 self.circle.drag(
                     // drag
-                    function (dx, dy, nx, ny)
-                    {
-                        if (this.drawWire)
-                        {
+                    function (dx, dy, nx, ny) {
+                        if (this.drawWire) {
                             this.drawWire.remove();
                         }
 
@@ -2148,8 +2523,7 @@
                         this.drawWire.toBack();
                         this.drawWire.attr({
                             'stroke': self.config.color,
-                            'stroke-width': 3,
-
+                            'stroke-width': 3
                         });
                         this.drawWire.attr(self.isOutput() ? 'arrow-end' : 'arrow-start', 'classic-narrow-long');
                     },
@@ -2161,30 +2535,25 @@
                     },
                     // end
                     function (evt) {
-                        if (this.drawWire)
-                        {
+                        if (this.drawWire) {
                             this.drawWire.remove();
                         }
 
                         var targetSocket = raphael.getElementByPoint(evt.clientX, evt.clientY);
                         if (targetSocket)  // we have a target
                         {
-                            if (targetSocket.data("vaxType") === "socket")
-                            {
+                            if (targetSocket.data("vaxType") === "socket") {
                                 // different kinds, not the same socket/node
-                                if (targetSocket.data("socketKind") !== self.kind && targetSocket.data("socketId") !== self.id && targetSocket.data("nodeId") !== self.node.getId())
-                                {
+                                if (targetSocket.data("socketKind") !== self.kind && targetSocket.data("socketId") !== self.id && targetSocket.data("nodeId") !== self.node.getId()) {
 
                                     // check if we dont wire more than 1 time an output socket
                                     var targetSocketObj = vaxRoot.sockets[targetSocket.data("socketId")];
-                                    if (!(targetSocketObj.isInput() && targetSocketObj.isWired()))
-                                    {
+                                    if (!(targetSocketObj.isInput() && targetSocketObj.isWired())) {
                                         // check type compatibility
-                                        var inputParsedType  = self.isInput() ? self.config.parsedType : targetSocket.data("socketParsedType");
+                                        var inputParsedType = self.isInput() ? self.config.parsedType : targetSocket.data("socketParsedType");
                                         var outputParsedType = self.isInput() ? targetSocket.data("socketParsedType") : self.config.parsedType;
 
-                                        if (vaxRoot.areParsedTypesCompatible(inputParsedType, outputParsedType))
-                                        {
+                                        if (vaxRoot.areParsedTypesCompatible(inputParsedType, outputParsedType)) {
                                             vaxRoot.wire(self.id, targetSocket.data("socketId"));
 
                                             // push action into history
@@ -2193,10 +2562,10 @@
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            // we do nothing ?
+                        } // if (targetSocket)
+                        else {
+                            // we have no element under mouse -> we invoke choose component dialog with specially filtered elements + post creation wiring
+                            vaxRoot.showComponentSelector(self);
                         }
 
                         self.refreshState(); // refresh state of circle
@@ -2206,22 +2575,23 @@
                 );
 
                 // dragging group move handler
-                self.node.getDraggingGroup().on('drag', function()
-                {
+                self.node.getDraggingGroup().on('drag', function () {
                     self.refreshWires();
                 });
             };
 
-            this.refreshWires = function ()
-            {
+            this.refreshWires = function () {
                 // wires
-                for (var k in self.wires)
-                {
-                    if (self.wires.hasOwnProperty(k))
-                    {
+                for (var k in self.wires) {
+                    if (self.wires.hasOwnProperty(k)) {
                         vaxRoot.wires[k].refresh();
                     }
                 }
+            };
+
+            this.getId = function ()
+            {
+                return this.id;
             };
 
             this.getNode = function()
@@ -2637,6 +3007,35 @@
 
             this.functions = {};
 
+
+            this.saveHandler = vaxRoot.config.userFunctionsSaveHandler || function(id, data, callback) {
+                window.localStorage.setItem(id, JSON.stringify(data));
+                callback();
+            };
+
+            this.loadHandler = vaxRoot.config.userFunctionsLoadHandler || function(callback) {
+                var repository = {};
+
+                for (var k in window.localStorage)
+                {
+                    if (window.localStorage.hasOwnProperty(k))
+                    {
+                        if (k.substr(0, 7) == 'vax_uf_')
+                        {
+                            try
+                            {
+                                repository[k] = JSON.parse(localStorage[k]);
+                            }
+                            catch (e) {
+                                window.console.debug("Couldn't parse json for id: " + k, localStorage[k], e);
+                            }
+                        }
+                    }
+                }
+
+                callback(repository);
+            };
+
             if (!(vaxRoot instanceof VAX)) {
                 throw new Error("Instance of VAX was expected");
             }
@@ -2645,43 +3044,46 @@
 
             this.loadAll = function()
             {
-                for (var k in window.localStorage)
+                var self = this;
+
+                self.vaxRoot.ui.showOverlay();
+
+                self.loadHandler(function(repository)
                 {
-                    if (window.localStorage.hasOwnProperty(k))
+                    for (var k in repository)
                     {
-                        if (k.substr(0, 7) == 'vax_uf_')
+                        var uf = repository[k];
+
+                        if (uf && uf.component && uf.graph)
                         {
-                            try {
-                                var uf = JSON.parse(localStorage[k]);
-                            }
-                            catch (e)
-                            {
-                                window.console.debug("Couldn't parse json for id: " + k, localStorage[k], e);
-                            }
+                            var ufId = uf.id = k;
+                            uf.name = uf.name || ufId;
 
-                            if (uf && uf.component && uf.graph)
-                            {
-                                var ufId = uf.id = k;
-                                uf.name = uf.name || ufId;
+                            self.functions[ufId] = uf;
 
-                                this.functions[ufId] = uf;
+                            // force component group
+                            uf.component.group = "_userFunctions";
 
-                                // force component group
-                                uf.component.group = "_userFunctions";
-
-                                this.vaxRoot.schema.components[ufId] = this.vaxRoot.buildComponentConfig(uf.component, uf.component.name, {id: ufId, name: uf.name});
-                            }
+                            self.vaxRoot.schema.components[ufId] = self.vaxRoot.buildComponentConfig(uf.component, uf.component.name, {id: ufId, name: uf.name});
                         }
                     }
-                }
+
+                    self.vaxRoot.ui.hideOverlay();
+                });
             };
 
             this.save = function(id, name, componentConfig, graph)
             {
+                var self = this;
+                this.vaxRoot.ui.showOverlay();
+
                 var uf = {id: id, name: name, component: componentConfig, graph: graph};
                 this.functions[id] = uf;
 
-                window.localStorage.setItem(id, JSON.stringify(uf));
+                this.saveHandler(id, uf, function()
+                {
+                    self.vaxRoot.ui.hideOverlay();
+                });
             };
 
             this.getAll = function()
@@ -2738,7 +3140,7 @@
 
                 var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
-                self.rect = raphael.rect(nodeX + 5, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35 - 19, 10, 10, 2);
+                self.rect = raphael.rect(nodeX + 5, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 20 - 5, 10, 10, 2);
                 self.rect.attr({
                     "fill": vaxRoot.getColorOfParsedType(self.config.type),
                     "stroke-width": 0,
@@ -2748,12 +3150,12 @@
                 self.rect.click(function() {self.invokeValuePicker();});
                 this.node.getDraggingGroup().addRect(self.rect);
 
-                self.caption = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35 - 15, self.config.title);
+                self.caption = raphael.text(nodeX + 20, nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 20, self.config.title + ':');
                 self.caption.attr({
                     'text-anchor': 'start',
                     "fill": "#fff",
                     "font-family": "Tahoma",
-                    "font-size": "12pt",
+                    "font-size": "10pt",
                     "font-weight": "bold",
                     "title": "Click to change this value ...",
                     "cursor": "pointer"
@@ -2775,13 +3177,16 @@
 
                 var autoHeightDimensions = self.node.calcAutoHeightDimensions();
 
+                var captionBb = self.caption.getBBox();
+
                 var valueTitle = self.getValueTitle(self.value);
                 self.valueHolderSet = raphael.paragraph({
-                    x: nodeX + 20,
-                    y: nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 35,
-                    text: valueTitle,
-                    maxWidth: self.node.getWidth() - 20 - 5,
-                    maxHeight: 20,
+                    x: nodeX + 20 + captionBb.width,
+                    y: nodeY + autoHeightDimensions.inputSockets + (self.nodeIndex + 1) * 20,
+                    text: valueTitle.toString(),
+                    maxWidth: self.node.getWidth() - 20 - 5 - captionBb.width,
+                    maxHeight: 10,
+                    lineHeight: 12,
                     textStyle: {
                         "text-anchor": 'start',
                         "fill": "orange",
@@ -2796,6 +3201,11 @@
                     "title": valueTitle + "\nClick to change this value ...",
                     "cursor": "pointer"
                 });
+
+                for (var i = 1; i < self.valueHolderSet.length; ++i)
+                {
+                    self.valueHolderSet[i].remove();
+                }
 
                 self.valueHolder.click(function()
                 {
@@ -2889,7 +3299,7 @@
 
                 var padding      = 15;
                 var socketHeight = 20;
-                var attrHeight   = 35;
+                var attrHeight   = 20;
 
                 var inputSocketCount  = _.size(this.config.inputSockets);
                 var outputSocketCount = _.size(this.config.outputSockets);
@@ -3014,14 +3424,14 @@
                     stroke: "#000",
                     "stroke-opacity": 1
                 });
-                self.bgRect.toBack();
+                self.bgRect.insertBefore(self.nodeCaption);
 
                 self.captionRect2 = raphael.rect(self.config.x, self.config.y + 10, nodeWidth, hasTypeParams ? 32 : 20);
                 self.captionRect2.attr({
                     fill: self.config.color,
                     "stroke-width": 0
                 });
-                self.captionRect2.toBack();
+                self.captionRect2.insertBefore(self.bgRect);
 
                 // caption rect
                 self.captionRect = raphael.rect(self.config.x, self.config.y, nodeWidth, hasTypeParams ? 42 : 30, 10);
@@ -3029,7 +3439,7 @@
                     fill: self.config.color,
                     "stroke-width": 0
                 });
-                self.captionRect.toBack();
+                self.captionRect.insertBefore(self.bgRect);
 
                 // add bg graphics to dragging group
                 self.draggingGroup.addRect(self.bgRect).addRect(self.captionRect).addRect(self.captionRect2);
@@ -3285,11 +3695,11 @@
             };
 
             this.getWidth = function () {
-                return self.moveContainer.attr('width')
+                return self.moveContainer.attr('width');
             };
 
             this.getHeight = function () {
-                return self.config.height;
+                return self.moveContainer.attr('height');
             };
 
             this.init();
@@ -3573,7 +3983,8 @@
                         x: x + padding,
                         y: y + padding + 3,
                         maxHeight: 20,
-                        text: self.transformText(self.text),
+                        lineHeight: 12,
+                        text: self.transformText(self.text).toString(),
                         textStyle: textStyle
                     });
 
@@ -3582,16 +3993,23 @@
                 }
                 else
                 {
-                    var paragraph = raphael.paragraph({
+                     paragraph = raphael.paragraph({
                         x: x + padding,
                         y: y + padding + 3,
                         maxHeight: 20,
                         maxWidth: width - padding * 2,
-                        text: self.transformText(self.text),
+                        lineHeight: 12,
+                        text: self.transformText(self.text).toString(),
                         textStyle: textStyle
                     });
 
                     self.titleText = paragraph[0];
+                }
+
+                // deleting unused paragraph elements
+                for (var i = 1; i < paragraph.length; ++i)
+                {
+                    paragraph[i].remove();
                 }
 
                 if (!height)
@@ -3829,6 +4247,16 @@
                     right: x + w,
                     bottom: y + h
                 };
+            };
+
+            this.getX = function()
+            {
+                return this.moveContainer.attr('x');
+            };
+
+            this.getY = function()
+            {
+                return this.moveContainer.attr('y');
             };
 
             this.getWidth = function()
@@ -4248,13 +4676,22 @@
                 var nodePickle = {
                     id: node.getCompactId(),
                     c: node.config.component,
-                    x: node.getX(),
-                    y: node.getY()
+                    x: parseInt(node.getX()),
+                    y: parseInt(node.getY())
                 };
 
                 if (!_.isEmpty(node.config.typeInstances))
                 {
-                    nodePickle.t = node.config.typeInstances;
+                    // avoiding shallow copy
+                    nodePickle.t = {};
+
+                    for (var typeAlias in node.config.typeInstances)
+                    {
+                        if (node.config.typeInstances.hasOwnProperty(typeAlias))
+                        {
+                            nodePickle.t[typeAlias] = node.config.typeInstances[typeAlias];
+                        }
+                    }
                 }
 
                 if (!_.isEmpty(node.attributes))
@@ -4270,6 +4707,8 @@
 
                 return nodePickle;
             });
+
+
 
             // --- wires
             var wiresToPickle = filterNodesIds ? self.getWiresBetweenNodesIds(filterNodesIds) : self.wires;
@@ -4288,7 +4727,7 @@
             var commentsPickles = _.map(commentsToPickle, function(comment)
             {
                 var commentBb = comment.getBoundingBox();
-                return {t: comment.getText(), x: commentBb.left, y: commentBb.top, w: comment.getWidth(), h: comment.getHeight()};
+                return {t: comment.getText(), x: parseInt(commentBb.left), y: parseInt(commentBb.top), w: parseInt(comment.getWidth()), h: parseInt(comment.getHeight())};
             });
 
             // gather everything in a blueprint
@@ -4469,6 +4908,9 @@
                     self.createComment({x: commentPickle.x, y: commentPickle.y, width: commentPickle.w, height: commentPickle.h, text: commentPickle.t});
                 });
             }
+
+            // refresh stuff
+            self.refreshScrollSliders();
 
             // created nodesIds
             return _.values(nodesIdsMap);
