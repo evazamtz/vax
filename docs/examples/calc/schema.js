@@ -1,4 +1,4 @@
-var vaxCalcSchema = {
+var exampleSchema = {
 	"colors": {
 		"core": "0-#aaf-#9be:50-#225",
 		"ops": "0-#495-#075:20-#335",
