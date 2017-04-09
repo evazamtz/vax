@@ -5,30 +5,26 @@ var exampleSchema = {
 		"bool": "0-#0ff-#0dd:20-#111"
 	},
 	"groups": {
-		"core": "Основные элементы",
-		"ops": "Арифметические операции",
-		"bool": "Логические операции",
-		"str": "Строковые операции"
+		"core": "Core elements",
+		"ops": "Basic calculations",
+		"bool": "Logic operations",
+		"str": "Working with strings"
 	},
 	"types": {
 		"Numeric": {
-			"color": "#fff",
-			"title": "Число"
+			"color": "#fff"
 		},
 		"Boolean": {
-			"color": "#ff0",
-			"title": "Условие"
+			"color": "#ff0"
 		},
 		"String": {
-			"color": "#0ff",
-			"title": "Строка"
+			"color": "#0ff"
 		}
 	},
 	"components": {
 		"Result": {
 			"color": "0-#f80-#da0:50-#520",
 			"group": "core",
-			"title": "Результат",
 			"in": {
 				"I": "Any"
 			}
@@ -48,7 +44,6 @@ var exampleSchema = {
 			}
 		},
 		"Number": {
-			"title": "Число",
 			"color": "@core",
 			"group": "core",
 			"attrs": {
@@ -65,7 +60,6 @@ var exampleSchema = {
 		"String": {
 			"color": "@core",
 			"group": "core",
-			"title": "Строка",
 			"attrs": {
 				"V": {
 					"title": "=",
@@ -80,7 +74,7 @@ var exampleSchema = {
 		"ToString": {
 			"color": "@core",
 			"group": "str",
-			"title": "Преобразовать в строку",
+			"title": "Cast to string",
 			"in": {
 				"I": "Any"
 			},
@@ -91,7 +85,7 @@ var exampleSchema = {
 		"Concat": {
 			"color": "@core",
 			"group": "str",
-			"title": "Склеить строки",
+			"title": "Glue strings",
 			"in": {
 				"S1": "String",
 				"S2": "String",
@@ -103,12 +97,11 @@ var exampleSchema = {
 			}
 		},
 		"Prompt": {
-			"title": "Числовой параметр",
+			"title": "Prompt a number",
 			"color": "@core",
 			"group": "core",
 			"attrs": {
 				"Name": {
-					"title": "Название",
 					"type": "Any",
 					"default": "a"
 				}
@@ -177,7 +170,7 @@ var exampleSchema = {
 			}
 		},
 		"If": {
-			"title": "Если То Иначе",
+			"title": "If Then Else",
 			"color": "@bool",
 			"group": "bool",
 			"typeParams": [
@@ -195,7 +188,7 @@ var exampleSchema = {
 			}
 		},
 		"Gt": {
-			"title": "Больше (>)",
+			"title": "Greater (>)",
 			"color": "@bool",
 			"group": "bool",
 			"in": {
@@ -207,7 +200,7 @@ var exampleSchema = {
 			}
 		},
 		"Eq": {
-			"title": "Равняется",
+			"title": "Equals",
 			"color": "@bool",
 			"group": "bool",
 			"in": {
@@ -219,7 +212,7 @@ var exampleSchema = {
 			}
 		},
 		"Not": {
-			"title": "НЕ",
+			"title": "NOT",
 			"color": "@bool",
 			"group": "bool",
 			"in": {
@@ -230,7 +223,7 @@ var exampleSchema = {
 			}
 		},
 		"And": {
-			"title": "И",
+			"title": "AND",
 			"color": "@bool",
 			"group": "bool",
 			"in": {
@@ -242,7 +235,7 @@ var exampleSchema = {
 			}
 		},
 		"Or": {
-			"title": "ИЛИ",
+			"title": "OR",
 			"color": "@bool",
 			"group": "bool",
 			"in": {

@@ -1,4 +1,5 @@
 title: VAX
 description: Web-based Visual Absctract Scripting Editor
-theme: jekyll-theme-midnight
-show_downloads: true
+github_url: https://github.com/aveic/vax
+markdown: kramdown
+highlighter: rouge

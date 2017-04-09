@@ -4,29 +4,24 @@ colors:
   bool: "0-#0ff-#0dd:20-#111"
 
 groups:
-  core: Основные элементы
-  ops: Арифметические операции
-  bool: Логические операции
-  str: Строковые операции
+  core: Core elements
+  ops: Basic calculations
+  bool: Logic operations
+  str: Working with strings
 
 types:
   # Any type is considered as super type
   Numeric:
     color: "#fff"
-    title: Число
   Boolean:
     color: "#ff0"
-    title: Условие
   String:
     color: "#0ff"
-    title: Строка
-
 
 components:
   Result:
     color: "0-#f80-#da0:50-#520"
     group: core
-    title: Результат
     in:
       I: Any
 
@@ -41,7 +36,6 @@ components:
       O: @T
 
   Number:
-    title: Число
     color: @core
     group: core
     attrs:
@@ -55,7 +49,6 @@ components:
   String:
     color: @core
     group: core
-    title: Строка
     attrs:
       V:
         title: =
@@ -67,7 +60,7 @@ components:
   ToString:
     color: @core
     group: str
-    title: Преобразовать в строку
+    title: Cast to string
     in:
       I: Any
     out:
@@ -76,7 +69,7 @@ components:
   Concat:
     color: @core
     group: str
-    title: Склеить строки
+    title: Glue strings
     in:
       S1: String
       S2: String
@@ -86,12 +79,11 @@ components:
       O: String
 
   Prompt:
-    title: Числовой параметр
+    title: Prompt a number
     color: @core
     group: core
     attrs:
       Name:
-        title: Название
         type: Any
         default: "a"
     out:
@@ -147,7 +139,7 @@ components:
       O: Numeric
 
   If:
-    title: "Если То Иначе"
+    title: If Then Else
     color: @bool
     group: bool
     typeParams: [T]
@@ -160,7 +152,7 @@ components:
         type: "@T"
 
   Gt:
-    title: "Больше (>)"
+    title: "Greater (>)"
     color: @bool
     group: bool
     in:
@@ -170,7 +162,7 @@ components:
       O: Boolean
 
   Eq:
-    title: "Равняется"
+    title: Equals
     color: @bool
     group: bool
     in:
@@ -180,7 +172,7 @@ components:
       O: Boolean
 
   Not:
-    title: "НЕ"
+    title: NOT
     color: @bool
     group: bool
     in:
@@ -189,7 +181,7 @@ components:
       O: Boolean
 
   And:
-    title: "И"
+    title: AND
     color: @bool
     group: bool
     in:
@@ -199,7 +191,7 @@ components:
       O: Boolean
 
   Or:
-    title: "ИЛИ"
+    title: OR
     color: @bool
     group: bool
     in:

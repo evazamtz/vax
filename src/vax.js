@@ -486,7 +486,7 @@
                     color: "#fff",
                     extends: [],
                     typeParams: [],
-                    title: 'Любой'
+                    title: 'Any'
                 }
             };
 

@@ -1,0 +1,35 @@
+---
+layout: default
+example: calc
+---
+
+<h1 class="text-center">Visual Scripting is Easy Now!</h1>
+<div style="height: 450px"></div>
+<div class="text-center">
+    <button id="eval" type="button" class="btn-large btn btn-primary">Evaluate!</button>
+    <h2 id="result" style="display: none"></h2>
+</div>
+
+<script type="text/javascript">
+    $(function()
+    {
+        $('<div id="vax-calc" style="position: absolute; top: 190px; left: 10px;"></div>').appendTo($('body'));
+
+        var screenHeight = (window.innerHeight > 0) ? window.innerHeight : screen.height;
+        var screenWidth  = (window.innerWidth > 0) ? window.innerWidth : screen.width;
+
+        $('#vax-calc').css({width: screenWidth - 30, height: 400});
+
+        window.myVAX = new VAX('vax-calc', {schema: exampleSchema});
+
+        myVAX.loadGraph({"nodes":[{"id":2,"c":"Number","x":301,"y":116,"a":{"V":"2"}},{"id":5,"c":"Add","x":491,"y":53},{"id":9,"c":"Repeat","x":493,"y":179,"t":{"T":"Numeric"}},{"id":12,"c":"Mul","x":667,"y":115},{"id":24,"c":"ToString","x":790,"y":155},{"id":28,"c":"Concat","x":1077,"y":113},{"id":36,"c":"String","x":918,"y":68,"a":{"V":"Result  = "}},{"id":40,"c":"Result","x":1268,"y":147}],"wires":[[2,"O",5,"A"],[2,"O",5,"B"],[2,"O",9,"I"],[5,"O",12,"A"],[9,"O",12,"B"],[12,"O",24,"I"],[24,"O",28,"S2"],[36,"O",28,"S1"],[28,"O",40,"I"]],"comments":[]});
+
+        // eval
+        $('#eval').click(function()
+        {
+            $('#result').text(walkCalculator(myVAX)).show();
+        });
+    });
+</script>
+
+
