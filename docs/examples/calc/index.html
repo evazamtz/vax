@@ -3,13 +3,15 @@ layout: example
 example: calc
 ---
 
-<div id="vax-calc" style="position: absolute; top: 120px; left: 10px;"></div>
+
 
 <button id="eval" type="button">Eval!</button>
 
 <script type="text/javascript">
     $(function()
     {
+        $('<div id="vax-calc" style="position: absolute; top: 120px; left: 10px;"></div>').appendTo($('body'));
+
         var screenHeight = (window.innerHeight > 0) ? window.innerHeight : screen.height;
         var screenWidth  = (window.innerWidth > 0) ? window.innerWidth : screen.width;
 
