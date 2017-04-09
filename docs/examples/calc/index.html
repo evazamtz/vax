@@ -2,9 +2,6 @@
 layout: example
 example: calc
 ---
-
-
-
 <button id="eval" type="button">Eval!</button>
 
 <script type="text/javascript">
@@ -15,7 +12,7 @@ example: calc
         var screenHeight = (window.innerHeight > 0) ? window.innerHeight : screen.height;
         var screenWidth  = (window.innerWidth > 0) ? window.innerWidth : screen.width;
 
-        $('#vax-calc').css({width: screenWidth - 30, height: screenHeight});
+        $('#vax-calc').css({width: screenWidth - 30, height: screenHeight - 130});
 
         window.myVAX = new VAX('vax-calc', {schema: exampleSchema});
 
