@@ -1,0 +1,25 @@
+---
+layout: default
+example: simple
+---
+<button id="eval" type="button" class="btn btn-primary">Eval!</button>
+
+<script type="text/javascript">
+    $(function()
+    {
+        $('<div id="vax-calc" style="position: absolute; top: 120px; left: 10px;"></div>').appendTo($('body'));
+
+        var screenHeight = (window.innerHeight > 0) ? window.innerHeight : screen.height;
+        var screenWidth  = (window.innerWidth > 0) ? window.innerWidth : screen.width;
+
+        $('#vax-calc').css({width: screenWidth - 30, height: screenHeight - 130});
+
+        window.myVAX = new VAX('vax-calc', {schema: exampleSchema});
+
+        // eval
+        $('#eval').click(function()
+        {
+            alert(walkSimple(myVAX));
+        });
+    });
+</script>

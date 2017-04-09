@@ -3,13 +3,6 @@ layout: default
 example: calc
 ---
 
-<h1 class="text-center">Visual Scripting is Easy Now!</h1>
-<div style="height: 450px"></div>
-<div class="text-center">
-    <button id="eval" type="button" class="btn-large btn btn-primary">Evaluate!</button>
-    <h2 id="result" style="display: none"></h2>
-</div>
-
 <script type="text/javascript">
     $(function()
     {
@@ -31,5 +24,120 @@ example: calc
         });
     });
 </script>
+
+<div class="text-center">
+    <h1>Visual Scripting is Easy Now!</h1>
+    <div style="height: 450px"></div>
+    <div>
+        <button id="eval" type="button" class="btn-lg btn btn-primary">Evaluate!</button>
+        <h2 id="result" style="display: none"></h2>
+    </div>
+</div> <!-- /text-center -->
+
+<hr/>
+<h2>What is VAX?</h2>
+<p class="lead">
+    <strong>VAX</strong> is a web-based visual editor for creating blueprints which consist of nodes defined by your schema. Blueprints are then transformed to trees and are easy to intepret on any backend.
+</p>
+<p>
+    <strong>VAX</strong> was inspired by Unreal Engine 4 Blueprints.
+    <strong>VAX</strong> might stand for Visual Abstract Scripting, and has nothing to do with <em>wax</em>.
+</p>
+
+<hr/>
+<h2>How it Works?</h2>
+
+<ul>
+    <li><h4>First — You Define a Language</h4>
+        <p>You define your type system and necessary components, that can be connected with wires, that are plugged into sockets.
+            <br/>Say you want to provide people with simple algebraic expression builder.
+        </p>
+        <p>
+{% highlight yml %}
+types:
+    # [Any] is considered as super type
+    Numeric:
+        color: "#fff"
+
+components:
+  Literal:
+    attrs:
+      V: Numeric
+    out:
+      O: Numeric
+
+  Plus:
+    in:
+      A: Numeric
+      B: Numeric
+    out:
+      O: Numeric
+{% endhighlight %}
+        </p>
+        <p>Here you defined a type <code>Numeric</code> and two components: <code>Literal</code> for providing numbers and <code>Plus</code> for adding two numbers.</p>
+    </li>
+    <li><h4>Then — Users create the blueprints</h4>
+        <p>Users visually create or modify blueprints, consisting of nodes and wires. They also can define their own functions, which are built with known components.</p>
+        <p>You can try out this simple schema <a href="{{ '/examples/simple' | relative_url }}">here</a>.</p>
+        <img src="{{ '/assets/images/simple_example_blueprint.png' | relative_url }}" class="img-thumbnail"/>
+    </li>
+    <li><h4>Finally — You intepret the tree</h4>
+        <p>You get a nested tree structure, that is easily encoded into something like <abbr>JSON</abbr>.</p>
+        <p>The blueprint above will be encoded into:</p>
+        <p>
+{% highlight json %}
+[
+  {
+    "id": 8,
+    "c": "Plus",
+    "links": {
+      "A": {
+        "id": 2,
+        "c": "Literal",
+        "a": {
+          "V": "2"
+        },
+        "links": {},
+        "out": "O"
+      },
+      "B": {
+        "id": 5,
+        "c": "Literal",
+        "a": {
+          "V": "2"
+        },
+        "links": {},
+        "out": "O"
+      }
+    }
+  }
+]
+{% endhighlight %}
+        </p>
+        <p>All you have to do is walk the tree and evaluate it!</p>
+        <p>This primitive <code>javascript</code> code snippet will do the work:</p>
+        <p>
+{% highlight javascript %}
+function walk(node) {
+    switch (node.c) {
+        case 'Literal':
+            return parseFloat(node.a.V);
+
+        case 'Plus':
+            return walk(node.links.A) + walk(node.links.B);
+
+        default:
+            throw new Error("Unsupported node component: " + node.component);
+    }
+}
+
+walk(tree);
+{% endhighlight %}
+    </li>
+</ul>
+
+
+
+
 
 

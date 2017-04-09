@@ -66,7 +66,7 @@
 
         .vax-tab {
             height: 20px;
-            padding: 3px 15px 7px 10px;
+            padding: 3px 15px 30px 10px;
             text-align: center;
             min-width: 60px;
             display: inline-block;
@@ -213,6 +213,10 @@
         min-width: 50px;
         min-height: 50px;
     }
+
+        .vax-dlg input, .vax-dlg textarea {
+            color: black;
+        }
 
         .vax-dlg-header {
             padding: 6px;

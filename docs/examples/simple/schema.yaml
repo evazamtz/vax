@@ -1,0 +1,18 @@
+types:
+  # [Any] is a supertype
+  Numeric:
+    color: "#fff"
+
+components:
+  Literal:
+    attrs:
+      V: Numeric
+    out:
+      O: Numeric
+
+  Plus:
+    in:
+      A: Numeric
+      B: Numeric
+    out:
+      O: Numeric
