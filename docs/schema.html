@@ -3,7 +3,7 @@ layout: default
 ---
 
 <h1>Schema</h1>
-<p>Since VAX is not bounded to any specific domain language, you can configure it to your own!</p>
+<p>Since VAX is not bounded to any specific domain language — you create your own!</p>
 
 <p>
     Table of contents:
@@ -17,7 +17,7 @@ layout: default
 </p>
 
 <h3>Schema skeleton</h3>
-<p>Advanced schema skeleton has following sections:<p>
+<p>An advanced schema skeleton has following sections:<p>
 <p>
 {% highlight yaml %}
 colors:
@@ -32,10 +32,10 @@ dictionaries:
     # Define key-value dictionaries for using in value pickers
 {% endhighlight %}
 </p>
-<p>No section is required, but obviosly you'll want to define two main sections, which are <code>types</code> and <code>components</code>.
+<p>No section is required, but obviously you'll want to define two main sections, which are <code>types</code> and <code>components</code>.
 
 <h3>Colors</h3>
-<p>Here you define list of color aliases that can referenced thoughout the remainding schema:<p>
+<p>Here you define a list of color aliases that can be referenced throughout the remaining schema:<p>
 <p>
 {% highlight yaml %}
 colors:
@@ -61,53 +61,55 @@ components:
 
 
 <h3>Types</h3>
-<p>Types in VAX are somewhat similar to types, that inhabit statically-typed programming languages like Java/C++/Scala. Especially Scala :) <p>
-<p>Where do you use types? Nodes in VAX have input and output sockets. And they are typed the way that a type of an output socket must conform the corresponding input socket type.
-    Types help building valid blueprints, that are easier to validate and interpret. They also guide end users when they're blueprinting.
+<p>Types in VAX are somewhat similar to the types that inhabit statically-typed programming languages, like Java/C++/Scala. Especially Scala :) <p>
+<p>Where do you use types? Nodes in VAX have input and output sockets. The type of an output socket must conform to the corresponding type of the input socket.
+    Types help to build valid blueprints, which are easier to validate and interpert. They also guide end users when they're blueprinting.
 </p>
-<p>A VAX type can either extend others or be parametrized:</p>
+<p>A VAX type can either extend others or be parameterized:</p>
 <p>
 {% highlight yaml %}
 types:
   # Any is a supertype
   Expr: # Expr extends Any
     color: "#fff" # The wires of this type will be colored as "#fff"
-    title: Expression # Provide meaningful title, that'll be displayed on a blueprint
+    title: Expression # Provides a meaningful title, that'll be displayed on a blueprint
   Integral:
-    color: @num # Use color alises for your convience
+    color: @num # Use color aliases for your convenience
     extends: Expr # Integral extends Expr and Any
   Numeric:
-    extends: Integral # Numeric extends Integral => Numeric extends Expr, plus Numeric extends Any
+    extends: Integral # Numeric extends Integral => Numeric extends Expr, and Numeric also extends Any
     color: @num
   String:
     extends: [Expr]
     color: @str
     title: Text
   NumericString:
-    extends: [Numeric, String] # We can define multi-inheritance
+    extends: [Numeric, String] # Here we define multi-inheritance
     color: @str
     title: Text with a number
   List:
-    typeParams: [A] # This is like a type constructor, so we'll have to specify 'T' with a real type, e.g. List[Numeric]
+    typeParams: [A] # This is like a type constructor, so we'll have to specify 'A' with a real type, e.g. List[Numeric]
     color: @arr
   Map:
     typeParams: [A,B] # Yep, we can have multiple type parameters, e.g. Map[String,Numeric], but I doubt that you'll need one :)
 {% endhighlight %}
 </p>
+<p>Apparently, you extend types from others and define paremetrized types. Also don't forget to set colors and titles.</p>
+
 <p>Let's see how components use types:</p>
 <p>
 {% highlight yaml %}
 components:
     ToString: # def ToString(I:Any):String = I.toString
         in:
-            I: Any # Just usual type
+            I: Any # Just a usual type
         out:
             O: String
 
     Repeat: # def Repeat[T](I: T):T = I
-        typeParams: [T] # Node will ask for specifing type parameter 'T'
+        typeParams: [T] # The editor will ask you to specify the type parameter 'T'
         in:
-            I: @T # Using parametrized type
+            I: @T # Uses the specified parameterised type
         out:
             O: @T
 
@@ -136,8 +138,7 @@ components:
 
 {% endhighlight %}
 </p>
-<p>Apparently, you extend types from others and define paremetrized types. Also don't forget to set colors and titles.</p>
-<p>While you define components you reference types withing input and output sockets. You also can have type parameters on a particular component and the use it by alias, e.g. <code>@T</code>.</p>
+<p>While you are defining components you reference types within input and output sockets. You can also have type parameters on a particular component and the use it by alias, e.g. <code>@T</code>.</p>
 <p>The weird syntax <code>typeBounds: {T: {&lt: Expr}}</code> in terms of YAML means:</p>
 <p>
 {% highlight yaml %}
@@ -147,7 +148,7 @@ typeBounds:
 {% endhighlight %}
 </p>
 <p>and defines an upper type bound from 'Expr' for type parameter 'T'.</p>
-<p>When a user wants to create a node from a component that has type parameters, the editor asks to specify them, and then substitures type aliases with real types. E.g. for a component:</p>
+<p>When a user wants to create a node from a component that has type parameters, the editor will ask to specify them, and then will substitute the type aliases with the real types. E.g. for a component:</p>
 <p>
 {% highlight yaml %}
 IfThenElse:
@@ -166,7 +167,7 @@ IfThenElse:
 
 
 <h3>Groups</h3>
-<p>When the number of components grows, it's getting hard to navigate through them. You can put components into related groups, which are then displayed in component selector:<p>
+<p>When the number of components increases, it gets hard to navigate through them. You can put components into related groups, which are then displayed in component selector:<p>
 <img src="{{ '/assets/images/grouped_components.png' | relative_url }}" class="img-thumbnail"/>
 <p>
 {% highlight yaml %}
@@ -178,19 +179,19 @@ groups:
 
 components:
     Result:
-        group: core # 'Result' component is now in 'core' group
+        group: core # The component 'Result' is now in the group 'core'
         in:
           I: Any
 
     ToString:
-        group: str # Put 'ToString' to string operations :)
+        group: str # Putting 'ToString' into to the string operations group, 'str' :)
         in:
           I: Any
         out:
           O: String
 {% endhighlight %}
 </p>
-<p>If you don't specify the group of any component, it's getting placed into 'Uncategorized' group, which is one of system groups:</p>
+<p>If you don't specify the group of a component, it gets placed into the group 'Uncategorized', which is one of the system groups:</p>
 <p>
 {% highlight javascript %}
 return _.defaults(schema.groups, {
@@ -200,33 +201,33 @@ return _.defaults(schema.groups, {
 });
 {% endhighlight %}
 </p>
-<p>It's recommended that you don't use leading underscore in your groups names.</p>
+<p>It's recommended that you don't use leading underscore in your group names.</p>
 
 
 <h3>Components</h3>
-<p>Components are building blocks of your language or domain. In conjuction with types you can define very rich language, and use type system contraints to be sure you get valid blueprints.
-    End users can go even further and organize basic components into functions and reuse them later, thus enriching the design language.
+<p>Components are building blocks of your language or domain. In conjunction with the types, you can create a very rich language. You can use type system constraints to be sure you get valid blueprints.
+    End users can go even further and organise basic components into functions and reuse them later, thus enriching the design language.
 </p>
-<p>So a component is a template for a real blueprint node. The template containts input and output sockets definitions, attributes definitions, type parameters with type bounds
-    and of course stuff like title, color and group. See <a href="{{ '/editor.html' | relative_url }}">editor section</a> for visual reference.<p>
+<p>So a component is a template for a real blueprint node. The template contains: input and output sockets definitions, attributes definitions, type parameters with type bounds
+    and of course stuff like title, color and group. See the <a href="{{ '/editor.html' | relative_url }}">editor section</a> for a visual reference.<p>
 <p>
-<p>Minimal component definition doesn't really require anything:</p>
+<p>A minimal component definition doesn't really require anything:</p>
 <p>
 {% highlight yaml %}
 components:
-    Useless: # Unique name, the one you'll get within serialized tree
+    Useless: # A unique name, the one you'll see within serialized tree
 {% endhighlight %}
 </p>
 
-<p>In order to be usefull a node needs at least one input or output socket definition:</p>
+<p>In order to be useful a node needs at least one input or output socket definition:</p>
 <p>
 {% highlight yaml %}
 components:
     ToString:
-        in: # input sockets section
-          I: Any # We defined an input with a name 'I' that accepts a value of type 'Any'
-        out: # output sockets section
-          O: String # We defined an ouput with name 'O' that produces a value of type 'String'
+        in: # input socket section
+          I: Any # We define an input with a name 'I' that accepts a value of type 'Any'
+        out: # output socket section
+          O: String # We define an ouput with name 'O' that produces a value of type 'String'
 {% endhighlight %}
 </p>
 <p>Socket names should be unique within their respective section.</p>
@@ -250,7 +251,7 @@ components:
 {% endhighlight %}
 </p>
 
-<p>To make your component more user-friendly you can give it a title, a color and a group:</p>
+<p>To make your component more user-friendly, you can give it a title, a color and a group:</p>
 <p>
 {% highlight yaml %}
 components:
@@ -263,7 +264,7 @@ components:
 {% endhighlight %}
 </p>
 
-<p>Sometimes you need to provide a node with an attribute that can be set by a user on the blueprint. Minimal attribute definition consists of a name and a type:</p>
+<p>Sometimes you need to provide a node with an attribute that can be set by a user on the blueprint. Minimal attribute definitions consist of a name and a type:</p>
 <p>
 {% highlight yaml %}
 components:
@@ -274,9 +275,9 @@ components:
           O: Numeric
 {% endhighlight %}
 </p>
-<p>Sometimes types don't make sense for attributes, and it's true. In fact they don't affect anything at all for now. But they're reserved for future use cases,
-    like "socketable" attributes and using an ability for user to define attributes in user functions.
-    Good rule of thumb is to use closest meaningful type or just resort to <code>Any</code>.
+<p>It may seem that types don't make sense for attributes, and it's true. In fact they don't affect anything at all, for now. They're reserved for future use,
+    like "socketable" attributes and the ability for users to define attributes in the user functions.
+    A good rule of thumb is to use closest meaningful type or just resort to <code>Any</code>.
 </p>
 <p>As you might expected attributes can be configured with a title and a default value:</p>
 <p>
@@ -292,7 +293,7 @@ components:
           O: Numeric
 {% endhighlight %}
 </p>
-<p>By default, for modifying an attribute's value, the editor uses just uses a simple <code>&lt;input&gt;</code> element. But you can define your own value pickers. E.g. there's a built-in value picker called
+<p>By default, for modifying an attribute's value, the editor uses just a simple <code>&lt;input&gt;</code> element. But you can define your own value pickers. E.g. there's a built-in value picker called
     <code>dictionary</code>, which requires a defined dictionary in your schema:</p>
 <p>
 {% highlight yaml %}
@@ -323,7 +324,7 @@ dictionaries:
 {% endhighlight %}
 <img src="{{ '/assets/images/dict_example.png' | relative_url }}" class="img-thumbnail"/>
 </p>
-<p>In order to register your own value picker you have to resort to <code>registerValuePicker(type, valuePicker)</code> function on a <code>VAX</code> object, e.g.:</p>
+<p>In order to register your own value picker you have to resort to the <code>registerValuePicker(type, valuePicker)</code> function on a <code>VAX</code> object, e.g.:</p>
 <p>
 {% highlight javascript %}
 // we have to provide an object with two functions: 'getValueTitle' and 'invoke'
@@ -354,14 +355,14 @@ components:
                 type: Numeric
                 title: Value
                 default: 1
-                valuePicker: # this is what passed as 'options'
+                valuePicker: # this is what is passed as 'options'
                     type: prompt # picker name
                     promptMessage: "Provide a number, please ... "
         out:
           O: Numeric
 {% endhighlight %}
 </p>
-<p>Attributes sometimes might be substituted with input sockets. Also future versions of editor will provide with input sockets that can be set with default values just like attributes.</p>
+<p>Attributes may be substituted with input sockets. Also future versions of the editor will provide input sockets that can be set with default values just like attributes.</p>
 
 
 

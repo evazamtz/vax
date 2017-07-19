@@ -58,11 +58,11 @@ var myVAX = new VAX('vax', {
 });
 {% endhighlight %}
 </p>
-<p>In config you provide schema and handlers for saving/loading user functions if needed. By default they are stored in <code>localStorage</code>.
-    See <a href="{{ '/schema.html' | relative_rul }}">schema</a> definition documentation.</p>
+<p>In config you provide a schema and handlers for saving/loading user functions, if needed. By default they are stored in <code>localStorage</code>.
+    See the <a href="{{ '/schema.html' | relative_rul }}">schema</a> definition documentation.</p>
 
 <h3>Load/save blueprints</h3>
-<p>You can save your current blueprint graph with <code>saveGraph()</code> or <code>serializeGraph()</code> functions:</p>
+<p>You can save your current blueprint graph with the <code>saveGraph()</code> or the <code>serializeGraph()</code> functions:</p>
 <p>
 {% highlight javascript %}
 myVAX.saveGraph();
@@ -77,11 +77,11 @@ myVAX.loadGraph({nodes:[{c: "Select", id: 1, x: 900, y: 200}]});
 </p>
 
 <h3>Compose trees</h3>
-<p>To convert your blueprint to a tree use <code>composeTreesInlined()</code> or <code>composeTrees()</code>function:</p>
+<p>To convert your blueprint to a tree use the <code>composeTreesInlined()</code> or the <code>composeTrees()</code>function:</p>
 <p>
 {% highlight javascript %}
-myVAX.composeTreesInlined(); // returns an array of trees with user functions being inlined
-myVAX.composeTrees();        // returns an array of trees with user functions untouched
+myVAX.composeTreesInlined(); // returns an array of trees with inlined user functions
+myVAX.composeTrees();        // returns an array of trees with untouched user functions
 {% endhighlight %}
 </p>
 

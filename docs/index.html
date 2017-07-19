@@ -37,11 +37,10 @@ example: calc
 <hr/>
 <h2>What is VAX?</h2>
 <p class="lead">
-    <strong>VAX</strong> is a web-based visual editor for creating blueprints which consist of nodes defined by your schema. Blueprints are then transformed to trees and are easy to intepret on any backend.
+    <strong>VAX</strong> is a web-based visual editor for creating blueprints consisting of nodes defined by your schema. Blueprints are then transformed to trees which are easy to interpret on any backend.
 </p>
 <p>
-    <strong>VAX</strong> was inspired by Unreal Engine 4 Blueprints.
-    <strong>VAX</strong> might stand for Visual Abstract Scripting, and has nothing to do with <em>wax</em>.
+    <strong>VAX</strong> is inspired by Unreal Engine 4 Blueprints.
 </p>
 
 <hr/>
@@ -49,8 +48,8 @@ example: calc
 
 <ul>
     <li><h4>First — <a href="{{ '/schema.html' | relative_url }}">You Define a Language</a></h4>
-        <p>You define your type system and necessary components, that can be connected with wires, that are plugged into sockets.
-            <br/>Say you want to provide people with simple algebraic expression builder.
+        <p>You define your type system and necessary components.
+            <br/>Say you want to provide people with a simple algebraic expression builder.
         </p>
         <p>
 {% highlight yml %}
@@ -74,14 +73,14 @@ components:
       O: Numeric
 {% endhighlight %}
         </p>
-        <p>Here you defined a type <code>Numeric</code> and two components: <code>Literal</code> for providing numbers and <code>Plus</code> for adding two numbers.</p>
+        <p>Here you defined a type <code>Numeric</code> and two components: <code>Literal</code> — for providing numbers and <code>Plus</code> — for adding two numbers.</p>
     </li>
     <li><h4>Then — <a href="{{ '/editor.html' | relative_url }}">Users create the blueprints</a></h4>
-        <p>Users visually create or modify blueprints, consisting of nodes and wires. They also can define their own functions, which are built with known components.</p>
+        <p>Users visually create or modify blueprints, consisting of nodes which are then connected with wires. They can also define their own functions, which are built with known components.</p>
         <p>You can try out this simple schema <a href="{{ '/examples/simple' | relative_url }}">here</a>.</p>
         <img src="{{ '/assets/images/simple_example_blueprint.png' | relative_url }}" class="img-thumbnail"/>
     </li>
-    <li><h4>Finally — You intepret the tree</h4>
+    <li><h4>Finally — You interpret the tree</h4>
         <p>You get a nested tree structure, that is easily encoded into something like <abbr>JSON</abbr>.</p>
         <p>The blueprint above will be encoded into:</p>
         <p>
