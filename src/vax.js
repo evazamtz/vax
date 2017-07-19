@@ -486,7 +486,7 @@
                     color: "#fff",
                     extends: [],
                     typeParams: [],
-                    title: 'Any'
+                    title: 'Любой'
                 }
             };
 
@@ -1313,7 +1313,7 @@
                     {
                         var compatibleSocket = _.find(component.outputSockets, function(targetOutputSocket)
                         {
-                            if (targetOutputSocket.parsedType.substr(0,1) === '@')
+                            if (_.isString(targetOutputSocket.parsedType) && targetOutputSocket.parsedType.substr(0,1) === '@')
                             {
                                 var typeAlias = targetOutputSocket.parsedType.substr(1);
                                 var typeBounds = component.typeBounds[typeAlias];
@@ -1341,7 +1341,7 @@
                     {
                         var compatibleSocket = _.find(component.inputSockets, function(targetInputSocket)
                         {
-                            if (targetInputSocket.parsedType.substr(0,1) === '@')
+                            if (_.isString(targetInputSocket.parsedType) && targetInputSocket.parsedType.substr(0,1) === '@')
                             {
                                 var typeAlias  = targetInputSocket.parsedType.substr(1);
                                 var typeBounds = component.typeBounds[typeAlias];
