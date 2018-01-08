@@ -92,7 +92,11 @@ var exampleSchema = {
 				"T"
 			],
 			"attrs": {
-				"Name": "String"
+				"Name": {
+					"type": "String",
+					"title": "Name",
+					"default": "a"
+				}
 			},
 			"in": {
 				"Val": "@T"
@@ -108,7 +112,11 @@ var exampleSchema = {
 				"T"
 			],
 			"attrs": {
-				"Name": "String"
+				"Name": {
+					"type": "String",
+					"title": "Name",
+					"default": "a"
+				}
 			},
 			"out": {
 				"O": "@T"
