@@ -91,7 +91,7 @@ var exampleSchema = {
 			"typeParams": [
 				"T"
 			],
-			"attr": {
+			"attrs": {
 				"Name": "String"
 			},
 			"in": {
@@ -107,7 +107,7 @@ var exampleSchema = {
 			"typeParams": [
 				"T"
 			],
-			"attr": {
+			"attrs": {
 				"Name": "String"
 			},
 			"out": {
