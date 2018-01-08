@@ -1,14 +1,16 @@
-var exampleSchema = {
+{
 	"colors": {
 		"core": "0-#aaf-#9be:50-#225",
 		"ops": "0-#495-#075:20-#335",
-		"bool": "0-#0ff-#0dd:20-#111"
+		"bool": "0-#0ff-#0dd:20-#111",
+		"loop": "0-#cca-#83d:20-#111"
 	},
 	"groups": {
 		"core": "Core elements",
 		"ops": "Basic calculations",
 		"bool": "Logic operations",
-		"str": "Working with strings"
+		"str": "Working with strings",
+		"loops": "Loops"
 	},
 	"types": {
 		"Numeric": {
@@ -19,6 +21,9 @@ var exampleSchema = {
 		},
 		"String": {
 			"color": "#0ff"
+		},
+		"Action": {
+			"color": "#f0f"
 		}
 	},
 	"components": {
@@ -38,6 +43,72 @@ var exampleSchema = {
 			],
 			"in": {
 				"I": "@T"
+			},
+			"out": {
+				"O": "@T"
+			}
+		},
+		"SimpleFor": {
+			"color": "@loop",
+			"group": "loops",
+			"title": "For A..B",
+			"attrs": {
+				"S": {
+					"title": "Start",
+					"type": "Numeric",
+					"default": 0
+				},
+				"E": {
+					"title": "End",
+					"type": "Numeric",
+					"default": 10
+				}
+			},
+			"in": {
+				"A": {
+					"title": "Action",
+					"type": "Action"
+				}
+			},
+			"out": {
+				"O": "Action"
+			}
+		},
+		"While": {
+			"color": "@loop",
+			"group": "loops",
+			"in": {
+				"Condition": "Boolean",
+				"A": "Action"
+			},
+			"out": {
+				"O": "Action"
+			}
+		},
+		"SetVar": {
+			"color": "@core",
+			"group": "core",
+			"typeParams": [
+				"T"
+			],
+			"attr": {
+				"Name": "String"
+			},
+			"in": {
+				"Val": "@T"
+			},
+			"out": {
+				"O": "Action"
+			}
+		},
+		"GetVar": {
+			"color": "@core",
+			"group": "core",
+			"typeParams": [
+				"T"
+			],
+			"attr": {
+				"Name": "String"
 			},
 			"out": {
 				"O": "@T"
@@ -242,9 +313,8 @@ var exampleSchema = {
 				"A": "Boolean",
 				"B": "Boolean"
 			},
-			"out": {
-				"O": "Boolean"
-			}
+			"out": null
 		}
-	}
-};
+	},
+	"O": "Boolean"
+}
