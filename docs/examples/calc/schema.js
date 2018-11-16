@@ -125,6 +125,7 @@ var exampleSchema = {
 		"Number": {
 			"color": "@core",
 			"group": "core",
+			"title": "____Number____",
 			"attrs": {
 				"V": {
 					"title": "=",
